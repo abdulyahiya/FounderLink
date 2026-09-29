@@ -1,6 +1,7 @@
 package com.capgemini.payment.service;
 
 import com.capgemini.payment.entity.Payment;
+import com.capgemini.payment.util.ResendEmailClient;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final ResendEmailClient resendEmailClient;
 
     @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
@@ -25,15 +27,24 @@ public class EmailService {
             log.warn("Investor email not available for paymentId={}, skipping email", payment.getId());
             return;
         }
+        String subject = "Investment Confirmed — FounderLink 🎉";
+        String html = buildInvestorSuccessHtml(payment);
+
         try {
+            boolean sent = resendEmailClient.sendEmail(to, subject, html);
+            if (sent) {
+                log.info("Payment success email sent to investor via Resend: {}", to);
+                return;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
             helper.setTo(to);
-            helper.setSubject("Investment Confirmed — FounderLink 🎉");
-            helper.setText(buildInvestorSuccessHtml(payment), true);
+            helper.setSubject(subject);
+            helper.setText(html, true);
             mailSender.send(message);
-            log.info("Payment success email sent to investor: {}", to);
+            log.info("Payment success email sent to investor via SMTP: {}", to);
         } catch (Exception e) {
             log.error("Failed to send investor success email: {}", e.getMessage());
         }
@@ -45,15 +56,24 @@ public class EmailService {
             log.warn("Investor email not available for paymentId={}, skipping email", payment.getId());
             return;
         }
+        String subject = "Investment Update — FounderLink";
+        String html = buildInvestorRejectedHtml(payment);
+
         try {
+            boolean sent = resendEmailClient.sendEmail(to, subject, html);
+            if (sent) {
+                log.info("Payment rejection email sent to investor via Resend: {}", to);
+                return;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
             helper.setTo(to);
-            helper.setSubject("Investment Update — FounderLink");
-            helper.setText(buildInvestorRejectedHtml(payment), true);
+            helper.setSubject(subject);
+            helper.setText(html, true);
             mailSender.send(message);
-            log.info("Payment rejection email sent to investor: {}", to);
+            log.info("Payment rejection email sent to investor via SMTP: {}", to);
         } catch (Exception e) {
             log.error("Failed to send investor rejection email: {}", e.getMessage());
         }
@@ -65,15 +85,24 @@ public class EmailService {
             log.warn("Founder email not available for paymentId={}, skipping email", payment.getId());
             return;
         }
+        String subject = "New Investment Confirmed — FounderLink 💰";
+        String html = buildFounderSuccessHtml(payment);
+
         try {
+            boolean sent = resendEmailClient.sendEmail(to, subject, html);
+            if (sent) {
+                log.info("Payment received email sent to founder via Resend: {}", to);
+                return;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
             helper.setTo(to);
-            helper.setSubject("New Investment Confirmed — FounderLink 💰");
-            helper.setText(buildFounderSuccessHtml(payment), true);
+            helper.setSubject(subject);
+            helper.setText(html, true);
             mailSender.send(message);
-            log.info("Payment received email sent to founder: {}", to);
+            log.info("Payment received email sent to founder via SMTP: {}", to);
         } catch (Exception e) {
             log.error("Failed to send founder email: {}", e.getMessage());
         }

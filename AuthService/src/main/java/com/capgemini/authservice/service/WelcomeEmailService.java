@@ -1,5 +1,6 @@
 package com.capgemini.authservice.service;
 
+import com.capgemini.authservice.util.ResendEmailClient;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class WelcomeEmailService {
 
     private final JavaMailSender mailSender;
+    private final ResendEmailClient resendEmailClient;
 
     @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
@@ -24,19 +26,32 @@ public class WelcomeEmailService {
 
     @Async
     public void sendWelcome(String toEmail, String name, String role) {
+        String subject = "Welcome to FounderLink, " + name + "!";
+        String htmlContent = buildHtml(name, role, clientUrl);
+
         try {
             log.info("Sending welcome email to: {}", toEmail);
+
+            // Try Resend HTTPS first
+            boolean sentViaResend = resendEmailClient.sendEmail(toEmail, subject, htmlContent);
+            if (sentViaResend) {
+                log.info("Welcome email sent successfully via Resend HTTPS to {}", toEmail);
+                return;
+            }
+
+            // Fallback to SMTP
+            log.info("Attempting SMTP fallback for welcome email to {}", toEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             String sender = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail.trim() : "abdulyahya9973@gmail.com";
             helper.setFrom(sender, "FounderLink");
             helper.setTo(toEmail.trim());
-            helper.setSubject("Welcome to FounderLink, " + name + "!");
-            helper.setText(buildHtml(name, role, clientUrl), true);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("Welcome email sent successfully to {}", toEmail);
+            log.info("Welcome email sent successfully via SMTP to {}", toEmail);
         } catch (Exception e) {
             log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage(), e);
         }

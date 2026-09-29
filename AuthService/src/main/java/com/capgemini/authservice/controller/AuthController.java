@@ -32,20 +32,35 @@ public class AuthController {
     private final AuthMapper authMapper;
     private final JwtUtil jwtUtil;
     private final org.springframework.mail.javamail.JavaMailSender mailSender;
+    private final com.capgemini.authservice.util.ResendEmailClient resendEmailClient;
 
     @GetMapping("/test-email")
     public ResponseEntity<Map<String, Object>> testEmail(@RequestParam(defaultValue = "abdulyahya9973@gmail.com") String to) {
         Map<String, Object> res = new HashMap<>();
+        String subject = "FounderLink Live Diagnostic Test";
+        String html = "<h3>FounderLink Live Email Test</h3><p>If you see this email, Resend HTTPS delivery is active and working 100%!</p>";
+
+        // Try Resend HTTPS
+        boolean resendOk = resendEmailClient.sendEmail(to, subject, html);
+        if (resendOk) {
+            res.put("success", true);
+            res.put("provider", "Resend HTTPS API");
+            res.put("message", "Email delivered successfully via Resend HTTPS to " + to);
+            return ResponseEntity.ok(res);
+        }
+
+        // Try SMTP fallback
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom("abdulyahya9973@gmail.com", "FounderLink");
             helper.setTo(to.trim());
-            helper.setSubject("FounderLink Live Diagnostic Test");
-            helper.setText("<h3>FounderLink Live SMTP Test</h3><p>If you see this email, SMTP is 100% working on live Render server!</p>", true);
+            helper.setSubject(subject);
+            helper.setText(html, true);
             mailSender.send(message);
             res.put("success", true);
-            res.put("message", "Email sent successfully to " + to);
+            res.put("provider", "SMTP");
+            res.put("message", "Email sent successfully via SMTP to " + to);
             return ResponseEntity.ok(res);
         } catch (Exception e) {
             res.put("success", false);

@@ -47,6 +47,10 @@ spring:
           timeout: 10000
           writetimeout: 10000
 
+resend:
+  api-key: ${RESEND_API_KEY:}
+  from-email: ${RESEND_FROM:FounderLink <onboarding@resend.dev>}
+
 eureka:
   client:
     service-url:

@@ -51,6 +51,9 @@ class AuthControllerTest {
     @MockitoBean
     private org.springframework.mail.javamail.JavaMailSender mailSender;
 
+    @MockitoBean
+    private com.capgemini.authservice.util.ResendEmailClient resendEmailClient;
+
     @Autowired
     private ObjectMapper objectMapper;
 

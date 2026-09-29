@@ -1,5 +1,6 @@
 package com.capgemini.authservice.service;
 
+import com.capgemini.authservice.util.ResendEmailClient;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class PasswordResetEmailService {
 
     private final JavaMailSender mailSender;
+    private final ResendEmailClient resendEmailClient;
 
     @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
@@ -26,19 +28,32 @@ public class PasswordResetEmailService {
     public void sendResetLink(String toEmail, String name, String token) {
         String baseUrl = clientUrl.endsWith("/") ? clientUrl.substring(0, clientUrl.length() - 1) : clientUrl;
         String resetLink = baseUrl + "/reset-password?token=" + token;
+        String htmlContent = buildHtml(name, resetLink);
+        String subject = "Reset Your FounderLink Password";
+
         try {
             log.info("Sending password reset email to: {}", toEmail);
+            
+            // Try Resend HTTPS first (works 100% on Render and cloud hosts)
+            boolean sentViaResend = resendEmailClient.sendEmail(toEmail, subject, htmlContent);
+            if (sentViaResend) {
+                log.info("Password reset email sent successfully via Resend HTTPS to {}", toEmail);
+                return;
+            }
+
+            // Fallback to SMTP
+            log.info("Attempting SMTP fallback for {}", toEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             String sender = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail.trim() : "abdulyahya9973@gmail.com";
             helper.setFrom(sender, "FounderLink");
             helper.setTo(toEmail.trim());
-            helper.setSubject("Reset Your FounderLink Password");
-            helper.setText(buildHtml(name, resetLink), true);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("Password reset email sent successfully to {}", toEmail);
+            log.info("Password reset email sent successfully via SMTP to {}", toEmail);
         } catch (Exception e) {
             log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage(), e);
         }

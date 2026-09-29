@@ -23,6 +23,9 @@ class EmailServiceTest {
     @Mock
     private JavaMailSender mailSender;
 
+    @Mock
+    private com.capgemini.payment.util.ResendEmailClient resendEmailClient;
+
     @InjectMocks
     private EmailService emailService;
 
