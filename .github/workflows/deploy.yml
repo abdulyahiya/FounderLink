@@ -10,6 +10,7 @@ jobs:
   deploy:
     name: Deploy Microservices to Production Server
     runs-on: ubuntu-latest
+    if: "${{ secrets.HOST != '' }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
