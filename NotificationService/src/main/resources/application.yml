@@ -33,6 +33,9 @@ spring:
           starttls:
             enable: true
             required: true
+          ssl:
+            trust: "*"
+            protocols: TLSv1.2 TLSv1.3
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
