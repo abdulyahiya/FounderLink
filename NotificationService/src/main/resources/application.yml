@@ -1,0 +1,77 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+  config:
+    import: optional:configserver:http://${CONFIG_SERVER_HOST:localhost}:8888
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/founderlink_notifications
+    username: abdulyahiya
+    password: yahya9973
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME:abdulyahya9973@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:ztaxuwjezulhauyw}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  api-docs:
+    path: /notifications/v3/api-docs
+
+rabbitmq:
+  exchange: founderlink.exchange
+  queue:
+    investment-created: investment.created.queue
+    investment-approved: investment.approved.queue
+    team-invite-sent: team.invite.sent.queue
+    startup-created: startup.created.queue
+    startup-rejected: startup.rejected.queue
+    payment-success: payment.success.queue
+    payment-failed: payment.failed.queue
+    user-registered: user.registered.queue
+
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://${ZIPKIN_HOST:localhost}:9411/api/v2/spans

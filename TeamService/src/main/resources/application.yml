@@ -1,0 +1,69 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: team-service
+  config:
+    import: optional:configserver:http://${CONFIG_SERVER_HOST:localhost}:8888
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/founderlink_teams
+    username: abdulyahiya
+    password: yahya9973
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  api-docs:
+    path: /teams/v3/api-docs
+
+rabbitmq:
+  exchange: founderlink.exchange
+  queue:
+    team-invite-sent: team.invite.sent.queue
+  routing-key:
+    team-invite-sent: team.invite.sent
+
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://${ZIPKIN_HOST:localhost}:9411/api/v2/spans

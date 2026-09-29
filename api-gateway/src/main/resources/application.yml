@@ -1,0 +1,130 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:http://${CONFIG_SERVER_HOST:localhost}:8888
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - name: DedupeResponseHeader
+          args:
+            name: Access-Control-Allow-Origin Access-Control-Allow-Credentials
+            strategy: RETAIN_UNIQUE
+      routes:
+        - id: auth-service
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/users/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: startup-service
+          uri: lb://STARTUP-SERVICE
+          predicates:
+            - Path=/startups/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: investment-service
+          uri: lb://INVESTMENT-SERVICE
+          predicates:
+            - Path=/investments/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: team-service
+          uri: lb://TEAM-SERVICE
+          predicates:
+            - Path=/teams/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: messaging-service
+          uri: lb://MESSAGING-SERVICE
+          predicates:
+            - Path=/messages/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/notifications/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Auth Service
+        url: /auth-service/v3/api-docs
+      - name: User Service
+        url: /user-service/v3/api-docs
+      - name: Startup Service
+        url: /startup-service/v3/api-docs
+      - name: Investment Service
+        url: /investment-service/v3/api-docs
+      - name: Team Service
+        url: /team-service/v3/api-docs
+      - name: Messaging Service
+        url: /messaging-service/v3/api-docs
+      - name: Notification Service
+        url: /notification-service/v3/api-docs
+      - name: Payment Service
+        url: /payment-service/v3/api-docs
+
+jwt:
+  secret: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
+
+logging:
+  level:
+    com.capgemini.apigateway: INFO
+
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://${ZIPKIN_HOST:localhost}:9411/api/v2/spans

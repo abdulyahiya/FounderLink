@@ -1,0 +1,169 @@
+name: FounderLink CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Auth Service
+        run: mvn clean package -DskipTests -q
+        working-directory: AuthService
+
+      - name: Build User Service
+        run: mvn clean package -DskipTests -q
+        working-directory: user-service
+
+      - name: Build Startup Service
+        run: mvn clean package -DskipTests -q
+        working-directory: startup-service
+
+      - name: Build Investment Service
+        run: mvn clean package -DskipTests -q
+        working-directory: InvestmentService
+
+      - name: Build Team Service
+        run: mvn clean package -DskipTests -q
+        working-directory: TeamService
+
+      - name: Build Messaging Service
+        run: mvn clean package -DskipTests -q
+        working-directory: MessagingService
+
+      - name: Build Notification Service
+        run: mvn clean package -DskipTests -q
+        working-directory: NotificationService
+
+      - name: Build Config Server
+        run: mvn clean package -DskipTests -q
+        working-directory: Config-Server
+
+      - name: Build Eureka Server
+        run: mvn clean package -DskipTests -q
+        working-directory: EurekaServer
+
+      - name: Build API Gateway
+        run: mvn clean package -DskipTests -q
+        working-directory: api-gateway
+
+      - name: Build Payment Service
+        run: mvn clean package -DskipTests -q
+        working-directory: PaymentService
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: founderlink-frontend/package-lock.json
+
+      - name: Build Frontend
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
+        working-directory: founderlink-frontend
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Auth Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./AuthService
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-auth:latest
+
+      - name: Build and push User Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./user-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-user:latest
+
+      - name: Build and push Startup Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./startup-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-startup:latest
+
+      - name: Build and push Investment Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./InvestmentService
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-investment:latest
+
+      - name: Build and push Team Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./TeamService
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-team:latest
+
+      - name: Build and push Messaging Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./MessagingService
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-messaging:latest
+
+      - name: Build and push Notification Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./NotificationService
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-notification:latest
+
+      - name: Build and push Config Server
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Config-Server
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-config:latest
+
+      - name: Build and push Eureka Server
+        uses: docker/build-push-action@v5
+        with:
+          context: ./EurekaServer
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-eureka:latest
+
+      - name: Build and push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-gateway
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-gateway:latest
+
+      - name: Build and push Payment Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./PaymentService
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-payment:latest
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./founderlink-frontend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/founderlink-frontend:latest

@@ -1,0 +1,201 @@
+{
+  "title": "FounderLink Microservices",
+  "uid": "founderlink-main",
+  "schemaVersion": 38,
+  "version": 2,
+  "refresh": "15s",
+  "style": "dark",
+  "tags": ["founderlink", "microservices"],
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "🟢  All Services Status",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 5 },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "#F2495C", "value": 0 }, { "color": "#73BF69", "value": 1 }]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }
+          ],
+          "fontSize": 20
+        }
+      },
+      "targets": [{
+        "expr": "up",
+        "legendFormat": "{{ job }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 2,
+      "title": "📈  HTTP Requests / sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 5, "w": 14, "h": 9 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 8, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(http_server_requests_seconds_count[1m])) by (application)",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 9,
+      "title": "⚡  Avg Response Time (ms)",
+      "type": "timeseries",
+      "gridPos": { "x": 14, "y": 5, "w": 10, "h": 9 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2, "fillOpacity": 8, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 500 }, { "color": "red", "value": 2000 }]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(http_server_requests_seconds_sum[1m])) by (application) / sum(rate(http_server_requests_seconds_count[1m])) by (application) * 1000",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 3,
+      "title": "🧠  JVM Heap Memory (MB)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 9 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [{
+        "expr": "sum(jvm_memory_used_bytes{area=\"heap\"}) by (application) / 1024 / 1024",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 4,
+      "title": "💾  JVM Non-Heap Memory (MB)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 9 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [{
+        "expr": "sum(jvm_memory_used_bytes{area=\"nonheap\"}) by (application) / 1024 / 1024",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 7,
+      "title": "🔗  Active DB Connections",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 23, "w": 8, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 12, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [{
+        "expr": "hikaricp_connections_active",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 8,
+      "title": "🧵  JVM Threads",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 23, "w": 8, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 12, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [{
+        "expr": "jvm_threads_live_threads",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    },
+    {
+      "id": 6,
+      "title": "🚨  HTTP Error Rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 23, "w": 8, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity", "spanNulls": true },
+          "color": { "fixedColor": "#F2495C", "mode": "fixed" }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[1m])) by (application)",
+        "legendFormat": "{{ application }}",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      }]
+    }
+  ]
+}

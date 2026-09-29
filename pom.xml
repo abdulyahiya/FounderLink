@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.capgemini</groupId>
+    <artifactId>founderlink-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>FounderLink</name>
+    <description>FounderLink Microservices Platform</description>
+
+    <modules>
+        <module>EurekaServer</module>
+        <module>Config-Server</module>
+        <module>api-gateway</module>
+        <module>AuthService</module>
+        <module>user-service</module>
+        <module>startup-service</module>
+        <module>InvestmentService</module>
+        <module>TeamService</module>
+        <module>MessagingService</module>
+        <module>NotificationService</module>
+        <module>PaymentService</module>
+    </modules>
+
+    <!-- ── SonarQube Properties (inherited by all modules) ────────── -->
+    <properties>
+        <sonar.host.url>http://localhost:9000</sonar.host.url>
+        <sonar.organization>founderlink</sonar.organization>
+        <sonar.projectKey>com.capgemini:founderlink-parent</sonar.projectKey>
+        <sonar.projectName>FounderLink</sonar.projectName>
+        <sonar.java.source>17</sonar.java.source>
+        <sonar.sourceEncoding>UTF-8</sonar.sourceEncoding>
+        <!-- Exclude generated, config, and boilerplate classes -->
+        <sonar.exclusions>
+            **/generated-sources/**,
+            **/*Application.java,
+            **/config/**,
+            **/exception/**,
+            **/dto/**,
+            **/entity/**,
+            **/model/**
+        </sonar.exclusions>
+        <sonar.coverage.exclusions>
+            **/*Application.java,
+            **/dto/**,
+            **/entity/**,
+            **/model/**
+        </sonar.coverage.exclusions>
+    </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- SonarQube Maven Plugin — available to all child modules -->
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>4.0.0.4121</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

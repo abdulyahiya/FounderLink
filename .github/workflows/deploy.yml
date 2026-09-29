@@ -1,0 +1,49 @@
+name: FounderLink Auto Deployment CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    name: Deploy Microservices to Production Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Remote Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT || 22 }}
+          script: |
+            set -e
+            echo "🚀 [CI/CD] Deployment triggered on $(date)..."
+            
+            # Navigate to project directory
+            if [ -d "/opt/FounderLink" ]; then
+              cd /opt/FounderLink
+            elif [ -d "$HOME/FounderLink" ]; then
+              cd "$HOME/FounderLink"
+            else
+              echo "⚠️ Project directory not found! Cloning repository..."
+              git clone https://github.com/${{ github.repository }}.git /opt/FounderLink
+              cd /opt/FounderLink
+            fi
+
+            echo "📥 [CI/CD] Fetching latest changes from GitHub..."
+            git fetch origin
+            git reset --hard origin/main || git reset --hard origin/master
+
+            echo "🔨 [CI/CD] Building and starting updated containers..."
+            DOCKER_BUILDKIT=1 docker compose up -d --build
+
+            echo "🧹 [CI/CD] Cleaning up dangling docker images..."
+            docker image prune -f
+
+            echo "✅ [CI/CD] All FounderLink services are live and updated successfully!"
