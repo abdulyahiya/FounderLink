@@ -3,7 +3,7 @@ import tokenService from '../tokenService';
 import type { ApiResponse, AuthResponse } from '../../types';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://founderlink-c6qc.onrender.com',
   withCredentials: true,
 });
 
@@ -71,8 +71,12 @@ api.interceptors.response.use(
       }
 
       try {
+        const authBase =
+          import.meta.env.VITE_AUTH_API_BASE_URL ||
+          import.meta.env.VITE_API_BASE_URL ||
+          'https://founderlink-c6qc.onrender.com';
         const response = await axios.post<AuthResponse>(
-          import.meta.env.VITE_AUTH_API_BASE_URL || 'http://localhost:8081/auth/refresh',
+          `${authBase}/auth/refresh`,
           { refreshToken },
           { withCredentials: true }
         );

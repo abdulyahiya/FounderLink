@@ -5,7 +5,8 @@ import { LoginFormData, RegisterFormData, AuthResponse, ApiResponse, ForgotPassw
 const authApi = axios.create({
   baseURL:
     import.meta.env.VITE_AUTH_API_BASE_URL ||
-    'http://localhost:8080',
+    import.meta.env.VITE_API_BASE_URL ||
+    'https://founderlink-c6qc.onrender.com',
   withCredentials: true,
 });
 

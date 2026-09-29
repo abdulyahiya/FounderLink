@@ -3,7 +3,10 @@ import api from './axiosConfig';
 import { UserProfile, ProfileFormData, AuthUser } from '../../types';
 
 const authLookupApi = axios.create({
-  baseURL: import.meta.env.VITE_AUTH_API_BASE_URL || 'http://localhost:8081',
+  baseURL:
+    import.meta.env.VITE_AUTH_API_BASE_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    'https://founderlink-c6qc.onrender.com',
   withCredentials: true,
 });
 

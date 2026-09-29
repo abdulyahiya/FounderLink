@@ -12,7 +12,8 @@ import {
 const paymentApi = axios.create({
   baseURL:
     import.meta.env.VITE_PAYMENT_API_BASE_URL ||
-    'http://localhost:8089',
+    import.meta.env.VITE_API_BASE_URL ||
+    'https://founderlink-c6qc.onrender.com',
 });
 
 paymentApi.interceptors.request.use((config: InternalAxiosRequestConfig) => {
