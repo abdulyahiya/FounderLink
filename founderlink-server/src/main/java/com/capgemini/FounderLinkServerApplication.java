@@ -17,6 +17,18 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class FounderLinkServerApplication {
 
     public static void main(String[] args) {
+        // Automatically sanitize Render's DATABASE_URL into standard Java JDBC format
+        String dbUrl = System.getenv("DATABASE_URL");
+        if (dbUrl != null && !dbUrl.startsWith("jdbc:")) {
+            System.setProperty("spring.datasource.url", "jdbc:" + dbUrl);
+        }
+
+        // Also normalize SPRING_DATASOURCE_URL if present
+        String springDbUrl = System.getenv("SPRING_DATASOURCE_URL");
+        if (springDbUrl != null && !springDbUrl.startsWith("jdbc:")) {
+            System.setProperty("spring.datasource.url", "jdbc:" + springDbUrl);
+        }
+
         new SpringApplicationBuilder(FounderLinkServerApplication.class)
             .beanNameGenerator(new FullyQualifiedAnnotationBeanNameGenerator())
             .run(args);
