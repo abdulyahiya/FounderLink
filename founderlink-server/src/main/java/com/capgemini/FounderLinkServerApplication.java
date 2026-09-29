@@ -6,6 +6,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.HashMap;
@@ -19,6 +20,7 @@ import java.util.Map;
 )
 @EnableFeignClients(basePackages = "com.capgemini")
 @EnableScheduling
+@EnableAsync
 public class FounderLinkServerApplication {
 
     public static void main(String[] args) {

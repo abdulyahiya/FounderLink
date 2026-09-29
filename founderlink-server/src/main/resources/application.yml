@@ -49,6 +49,9 @@ spring:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 3000
+          timeout: 3000
+          writetimeout: 3000
 
 # Eureka disabled in unified server mode
 eureka:
@@ -98,6 +101,9 @@ springdoc:
     path: /v3/api-docs
 
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
