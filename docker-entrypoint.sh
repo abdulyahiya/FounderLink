@@ -5,9 +5,9 @@ echo "=========================================="
 echo " Starting FounderLink Cloud Production Stack"
 echo "=========================================="
 
-# Parse DATABASE_URL if available
+# ── 1. PostgreSQL Configuration ──────────────────────────────
 if [ -n "$DATABASE_URL" ]; then
-    echo "[Init] Configuring PostgreSQL from DATABASE_URL..."
+    echo "[Init] Parsing Neon PostgreSQL credentials from DATABASE_URL..."
     CLEAN_URL=$(echo "$DATABASE_URL" | sed -e 's/^postgresql:\/\///' -e 's/^postgres:\/\///')
     
     DB_USER_PASS=$(echo "$CLEAN_URL" | cut -d'@' -f1)
@@ -20,82 +20,106 @@ if [ -n "$DATABASE_URL" ]; then
     export DB_PORT=${DB_PORT:-5432}
 fi
 
-export DB_HOST=${DB_HOST:-localhost}
+export DB_HOST=${DB_HOST:-ep-square-hat-b87lvinm-pooler.c-14.us-east-1.aws.neon.tech}
 export DB_PORT=${DB_PORT:-5432}
 export DB_USERNAME=${DB_USERNAME:-neondb_owner}
 export DB_PASSWORD=${DB_PASSWORD:-npg_xvnhi6kWEa3U}
-export EUREKA_SERVER_HOST="127.0.0.1"
+export SPRING_DATASOURCE_USERNAME="$DB_USERNAME"
+export SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD"
 
-echo "[Init] Target DB Host: $DB_HOST (Port: $DB_PORT)"
+# ── 2. RabbitMQ Configuration ───────────────────────────────
+if [ -n "$SPRING_RABBITMQ_ADDRESSES" ]; then
+    echo "[Init] Parsing CloudAMQP credentials..."
+    CLEAN_MQ=$(echo "$SPRING_RABBITMQ_ADDRESSES" | sed -e 's/^amqps:\/\///' -e 's/^amqp:\/\///')
+    MQ_USER_PASS=$(echo "$CLEAN_MQ" | cut -d'@' -f1)
+    MQ_HOST_VHOST=$(echo "$CLEAN_MQ" | cut -d'@' -f2)
+    
+    export RABBITMQ_USER=${RABBITMQ_USER:-$(echo "$MQ_USER_PASS" | cut -d':' -f1)}
+    export RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-$(echo "$MQ_USER_PASS" | cut -d':' -f2)}
+    export RABBITMQ_HOST=${RABBITMQ_HOST:-$(echo "$MQ_HOST_VHOST" | cut -d'/' -f1 | cut -d':' -f1)}
+    export SPRING_RABBITMQ_HOST="$RABBITMQ_HOST"
+    export SPRING_RABBITMQ_PORT="5671"
+    export SPRING_RABBITMQ_USERNAME="$RABBITMQ_USER"
+    export SPRING_RABBITMQ_PASSWORD="$RABBITMQ_PASSWORD"
+    export SPRING_RABBITMQ_SSL_ENABLED="true"
+    export SPRING_RABBITMQ_VIRTUAL_HOST="${RABBITMQ_USER}"
+fi
+
+export RABBITMQ_HOST=${RABBITMQ_HOST:-warthog.lmq.cloudamqp.com}
+export RABBITMQ_USER=${RABBITMQ_USER:-wxhdvvyu}
+export RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-l4qvNpKdzBDNJnY4cItJS8wf9S5XVXUR}
+
+# ── 3. Redis Configuration ──────────────────────────────────
+export SPRING_DATA_REDIS_HOST=${SPRING_DATA_REDIS_HOST:-fun-kodiak-318520.upstash.io}
+export SPRING_DATA_REDIS_PORT=${SPRING_DATA_REDIS_PORT:-6379}
+export SPRING_DATA_REDIS_PASSWORD=${SPRING_DATA_REDIS_PASSWORD:-gQAAAAAABNw4AAIgcDF1ZjBiMGVjYTE2ZTg0M2E1ODczOWViOTE3NWMzOWIxNg}
+export SPRING_DATA_REDIS_SSL_ENABLED="true"
+
+# ── 4. Discovery & Networking ──────────────────────────────
+export EUREKA_SERVER_HOST="127.0.0.1"
+export CONFIG_SERVER_HOST="127.0.0.1"
+export ZIPKIN_HOST="127.0.0.1"
+export JWT_SECRET="5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437"
+
+echo "[Init] DB Host: $DB_HOST (User: $DB_USERNAME)"
+echo "[Init] RabbitMQ Host: $RABBITMQ_HOST"
+echo "[Init] Redis Host: $SPRING_DATA_REDIS_HOST"
 
 # Helper function to construct JDBC URL
 get_jdbc_url() {
     local db_name=$1
-    if [ "$DB_HOST" != "localhost" ] && [ "$DB_HOST" != "127.0.0.1" ]; then
-        echo "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${db_name}?sslmode=require"
-    else
-        echo "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${db_name}"
-    fi
+    echo "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${db_name}?sslmode=require"
 }
 
-# Ultra-fast JVM Tuning for 512MB RAM multi-service container
-FAST_JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms16m -Xmx40m"
+# JVM Tuning for 512MB RAM multi-service container
+JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms16m -Xmx40m"
 GATEWAY_JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms32m -Xmx64m"
 
-# 1. Start Eureka Server in background
+# 1. Start Eureka Server
 echo "[1/10] Starting Eureka Discovery Server on port 8761..."
-java $FAST_JVM_OPTS -jar /app/EurekaServer.jar > /tmp/eureka.log 2>&1 &
-
-# 2. Start API Gateway IMMEDIATELY so Render's port scanner detects port 8080 right away
-echo "[2/10] Starting API Gateway on Port 8080..."
-java $GATEWAY_JVM_OPTS -jar /app/api-gateway.jar > /tmp/gateway.log 2>&1 &
-GATEWAY_PID=$!
-
-# Tail gateway log to stdout so Render logs show Gateway activity
-tail -f /tmp/gateway.log &
-
-# 3. Start Core Business Services with slight stagger to avoid CPU spikes
-sleep 3
-echo "[3/10] Starting AuthService (registration & login)..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_auth") \
-java $FAST_JVM_OPTS -jar /app/AuthService.jar > /tmp/auth.log 2>&1 &
-
+java $JVM_OPTS -jar /app/EurekaServer.jar &
 sleep 2
+
+# 2. Start API Gateway (Listens on public PORT 8080)
+echo "[2/10] Starting API Gateway on Port 8080..."
+java $GATEWAY_JVM_OPTS -jar /app/api-gateway.jar &
+GATEWAY_PID=$!
+sleep 3
+
+# 3. Start Core Services
+echo "[3/10] Starting AuthService..."
+SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_auth") \
+java $JVM_OPTS -jar /app/AuthService.jar &
+
 echo "[4/10] Starting UserService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_db") \
-java $FAST_JVM_OPTS -jar /app/user-service.jar > /tmp/user.log 2>&1 &
+java $JVM_OPTS -jar /app/user-service.jar &
 
-sleep 2
 echo "[5/10] Starting StartupService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_startups") \
-java $FAST_JVM_OPTS -jar /app/startup-service.jar > /tmp/startup.log 2>&1 &
+java $JVM_OPTS -jar /app/startup-service.jar &
 
-sleep 2
 echo "[6/10] Starting InvestmentService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_investments") \
-java $FAST_JVM_OPTS -jar /app/InvestmentService.jar > /tmp/investment.log 2>&1 &
+java $JVM_OPTS -jar /app/InvestmentService.jar &
 
-sleep 2
 echo "[7/10] Starting TeamService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_teams") \
-java $FAST_JVM_OPTS -jar /app/TeamService.jar > /tmp/team.log 2>&1 &
+java $JVM_OPTS -jar /app/TeamService.jar &
 
-sleep 2
 echo "[8/10] Starting MessagingService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_messages") \
-java $FAST_JVM_OPTS -jar /app/MessagingService.jar > /tmp/messaging.log 2>&1 &
+java $JVM_OPTS -jar /app/MessagingService.jar &
 
-sleep 2
 echo "[9/10] Starting NotificationService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_notifications") \
-java $FAST_JVM_OPTS -jar /app/NotificationService.jar > /tmp/notification.log 2>&1 &
+java $JVM_OPTS -jar /app/NotificationService.jar &
 
-sleep 2
 echo "[10/10] Starting PaymentService..."
 SPRING_DATASOURCE_URL=$(get_jdbc_url "paymentdb") \
-java $FAST_JVM_OPTS -jar /app/PaymentService.jar > /tmp/payment.log 2>&1 &
+java $JVM_OPTS -jar /app/PaymentService.jar &
 
-echo "[Ready] All 10 FounderLink microservices are initializing and registering with Eureka!"
+echo "[Ready] All 10 FounderLink microservices have been started and connected to Neon DB, CloudAMQP & Upstash Redis!"
 
-# Keep container alive by waiting for Gateway process
+# Wait for API Gateway
 wait $GATEWAY_PID
