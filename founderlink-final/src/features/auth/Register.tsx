@@ -78,7 +78,11 @@ const Register: React.FC = () => {
       toast.success('Account created! Please sign in.');
       navigate('/login');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Registration failed');
+      const msg = err.response?.data?.message || err.message || 'Registration failed';
+      toast.error(msg);
+      if (msg.toLowerCase().includes('already registered')) {
+        setTimeout(() => navigate('/login'), 1500);
+      }
     }
   };
 
