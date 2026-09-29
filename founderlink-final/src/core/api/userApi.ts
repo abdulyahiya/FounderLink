@@ -7,7 +7,6 @@ const authLookupApi = axios.create({
     import.meta.env.VITE_AUTH_API_BASE_URL ||
     import.meta.env.VITE_API_BASE_URL ||
     'https://founderlink-c6qc.onrender.com',
-  withCredentials: true,
 });
 
 export const getMyProfile = (userId: number): Promise<AxiosResponse<UserProfile>> =>

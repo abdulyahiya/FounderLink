@@ -7,7 +7,6 @@ const authApi = axios.create({
     import.meta.env.VITE_AUTH_API_BASE_URL ||
     import.meta.env.VITE_API_BASE_URL ||
     'https://founderlink-c6qc.onrender.com',
-  withCredentials: true,
 });
 
 authApi.interceptors.response.use((response) => {

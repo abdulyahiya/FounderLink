@@ -4,7 +4,6 @@ import type { ApiResponse, AuthResponse } from '../../types';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'https://founderlink-c6qc.onrender.com',
-  withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -77,8 +76,7 @@ api.interceptors.response.use(
           'https://founderlink-c6qc.onrender.com';
         const response = await axios.post<AuthResponse>(
           `${authBase}/auth/refresh`,
-          { refreshToken },
-          { withCredentials: true }
+          { refreshToken }
         );
         const newToken = response.data.token;
         tokenService.setToken(newToken);
