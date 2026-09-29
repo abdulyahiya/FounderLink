@@ -31,3 +31,5 @@ founderlink-final/build/
 # Misc
 *.resolved
 founderlink_documentation.md.resolved
+.neon
+node_modules/
