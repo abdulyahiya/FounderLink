@@ -9,8 +9,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/paymentdb
-    username: abdulyahiya
-    password: yahya9973
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -24,14 +24,14 @@ spring:
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
-    username: guest
-    password: guest
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${SPRING_MAIL_USERNAME:abdulyahya9973@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:ztaxuwjezulhauyw}
+    username: ${SPRING_MAIL_USERNAME:your_email@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:your_app_password}
     properties:
       mail:
         smtp:
@@ -51,8 +51,8 @@ springdoc:
     path: /api/payments/v3/api-docs
 
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID:rzp_test_SVoYe0oLVVgMeE}
-  key-secret: ${RAZORPAY_KEY_SECRET:QjpLmGe510u7BIEma6FAt7fb}
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder}
+  key-secret: ${RAZORPAY_KEY_SECRET:placeholder}
 
 management:
   endpoints:

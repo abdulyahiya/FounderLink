@@ -8,8 +8,8 @@ spring:
     import: optional:configserver:http://${CONFIG_SERVER_HOST:localhost}:8888
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/founderlink_auth
-    username: abdulyahiya
-    password: yahya9973
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -19,13 +19,13 @@ spring:
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
-    username: guest
-    password: guest
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${SPRING_MAIL_USERNAME:abdulyahya9973@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:ztaxuwjezulhauyw}
+    username: ${SPRING_MAIL_USERNAME:your_email@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:your_app_password}
     properties:
       mail:
         smtp:

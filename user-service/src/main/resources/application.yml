@@ -8,8 +8,8 @@ spring:
     import: optional:configserver:http://${CONFIG_SERVER_HOST:localhost}:8888
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/founderlink_db
-    username: abdulyahiya
-    password: yahya9973
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
