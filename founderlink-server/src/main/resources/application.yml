@@ -31,6 +31,7 @@ spring:
 
   data:
     redis:
+      username: default
       host: ${SPRING_DATA_REDIS_HOST:fun-kodiak-318520.upstash.io}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:gQAAAAAABNw4AAIgcDF1ZjBiMGVjYTE2ZTg0M2E1ODczOWViOTE3NWMzOWIxNg}
@@ -57,6 +58,7 @@ eureka:
 
 jwt:
   secret: ${JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+  expiration: ${JWT_EXPIRATION:86400000}
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:86400000}
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
@@ -66,6 +68,24 @@ razorpay:
 
 rabbitmq:
   exchange: founderlink.exchange
+  queue:
+    team-invite-sent: team.invite.sent.queue
+    investment-created: investment.created.queue
+    investment-approved: investment.approved.queue
+    startup-created: startup.created.queue
+    startup-rejected: startup.rejected.queue
+    payment-success: payment.success.queue
+    payment-failed: payment.failed.queue
+    user-registered: user.registered.queue
+  routing-key:
+    team-invite-sent: team.invite.sent
+    investment-created: investment.created
+    investment-approved: investment.approved
+    startup-created: startup.created
+    startup-rejected: startup.rejected
+    payment-success: payment.success
+    payment-failed: payment.failed
+    user-registered: user.registered
 
 app:
   admin:
