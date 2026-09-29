@@ -188,6 +188,23 @@
                             <artifactId>lombok</artifactId>
                         </path>
                     </annotationProcessorPaths>
+                    <excludes>
+                        <exclude>**/authservice/security/SecurityConfig.java</exclude>
+                        <exclude>**/user/config/SecurityConfig.java</exclude>
+                        <exclude>**/startup/config/SecurityConfig.java</exclude>
+                        <exclude>**/investment/config/SecurityConfig.java</exclude>
+                        <exclude>**/team/config/SecurityConfig.java</exclude>
+                        <exclude>**/messaging/config/SecurityConfig.java</exclude>
+                        <exclude>**/notification/config/SecurityConfig.java</exclude>
+                        <exclude>**/AuthServiceApplication.java</exclude>
+                        <exclude>**/UserServiceApplication.java</exclude>
+                        <exclude>**/StartupServiceApplication.java</exclude>
+                        <exclude>**/InvestmentServiceApplication.java</exclude>
+                        <exclude>**/TeamServiceApplication.java</exclude>
+                        <exclude>**/MessagingServiceApplication.java</exclude>
+                        <exclude>**/NotificationServiceApplication.java</exclude>
+                        <exclude>**/PaymentServiceApplication.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>

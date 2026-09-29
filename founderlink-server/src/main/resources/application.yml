@@ -8,9 +8,9 @@ spring:
     name: founderlink-server
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:jdbc:postgresql://ep-square-hat-b87lvinm-pooler.c-14.us-east-1.aws.neon.tech:5432/founderlink_db?sslmode=require}}
-    username: ${DB_USERNAME:${SPRING_DATASOURCE_USERNAME:neondb_owner}}
-    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:npg_xvnhi6kWEa3U}}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://ep-square-hat-b87lvinm-pooler.c-14.us-east-1.aws.neon.tech:5432/founderlink_db?sslmode=require}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:neondb_owner}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:npg_xvnhi6kWEa3U}}
     driver-class-name: org.postgresql.Driver
 
   jpa:
