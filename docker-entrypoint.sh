@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 echo "=========================================="
 echo " Starting FounderLink Cloud Production Stack"
@@ -60,10 +59,12 @@ export EUREKA_SERVER_HOST="127.0.0.1"
 export CONFIG_SERVER_HOST="127.0.0.1"
 export ZIPKIN_HOST="127.0.0.1"
 export JWT_SECRET="5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437"
+export PORT=${PORT:-8080}
 
 echo "[Init] DB Host: $DB_HOST (User: $DB_USERNAME)"
 echo "[Init] RabbitMQ Host: $RABBITMQ_HOST"
 echo "[Init] Redis Host: $SPRING_DATA_REDIS_HOST"
+echo "[Init] Public Port: $PORT"
 
 # Helper function to construct JDBC URL
 get_jdbc_url() {
@@ -73,53 +74,44 @@ get_jdbc_url() {
 
 # JVM Tuning for 512MB RAM multi-service container
 JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms16m -Xmx40m"
-GATEWAY_JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms32m -Xmx64m"
+GATEWAY_JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xms32m -Xmx64m"
 
-# 1. Start Eureka Server
+# 1. Start Eureka Server in Background
 echo "[1/10] Starting Eureka Discovery Server on port 8761..."
-java $JVM_OPTS -jar /app/EurekaServer.jar &
-sleep 2
+nohup java $JVM_OPTS -jar /app/EurekaServer.jar > /tmp/eureka.log 2>&1 &
 
-# 2. Start API Gateway (Listens on public PORT 8080)
-echo "[2/10] Starting API Gateway on Port 8080..."
-java $GATEWAY_JVM_OPTS -jar /app/api-gateway.jar &
-GATEWAY_PID=$!
-sleep 3
+# 2. Start Core Services in Background
+echo "[2/10] Starting AuthService (registration & login)..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_auth')" \
+java $JVM_OPTS -jar /app/AuthService.jar > /tmp/auth.log 2>&1 &
 
-# 3. Start Core Services
-echo "[3/10] Starting AuthService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_auth") \
-java $JVM_OPTS -jar /app/AuthService.jar &
+echo "[3/10] Starting UserService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_db')" \
+java $JVM_OPTS -jar /app/user-service.jar > /tmp/user.log 2>&1 &
 
-echo "[4/10] Starting UserService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_db") \
-java $JVM_OPTS -jar /app/user-service.jar &
+echo "[4/10] Starting StartupService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_startups')" \
+java $JVM_OPTS -jar /app/startup-service.jar > /tmp/startup.log 2>&1 &
 
-echo "[5/10] Starting StartupService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_startups") \
-java $JVM_OPTS -jar /app/startup-service.jar &
+echo "[5/10] Starting InvestmentService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_investments')" \
+java $JVM_OPTS -jar /app/InvestmentService.jar > /tmp/investment.log 2>&1 &
 
-echo "[6/10] Starting InvestmentService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_investments") \
-java $JVM_OPTS -jar /app/InvestmentService.jar &
+echo "[6/10] Starting TeamService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_teams')" \
+java $JVM_OPTS -jar /app/TeamService.jar > /tmp/team.log 2>&1 &
 
-echo "[7/10] Starting TeamService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_teams") \
-java $JVM_OPTS -jar /app/TeamService.jar &
+echo "[7/10] Starting MessagingService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_messages')" \
+java $JVM_OPTS -jar /app/MessagingService.jar > /tmp/messaging.log 2>&1 &
 
-echo "[8/10] Starting MessagingService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_messages") \
-java $JVM_OPTS -jar /app/MessagingService.jar &
+echo "[8/10] Starting NotificationService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_notifications')" \
+java $JVM_OPTS -jar /app/NotificationService.jar > /tmp/notification.log 2>&1 &
 
-echo "[9/10] Starting NotificationService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "founderlink_notifications") \
-java $JVM_OPTS -jar /app/NotificationService.jar &
+echo "[9/10] Starting PaymentService..."
+nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'paymentdb')" \
+java $JVM_OPTS -jar /app/PaymentService.jar > /tmp/payment.log 2>&1 &
 
-echo "[10/10] Starting PaymentService..."
-SPRING_DATASOURCE_URL=$(get_jdbc_url "paymentdb") \
-java $JVM_OPTS -jar /app/PaymentService.jar &
-
-echo "[Ready] All 10 FounderLink microservices have been started and connected to Neon DB, CloudAMQP & Upstash Redis!"
-
-# Wait for API Gateway
-wait $GATEWAY_PID
+echo "[10/10] Launching API Gateway in foreground on Port $PORT..."
+exec java $GATEWAY_JVM_OPTS -jar /app/api-gateway.jar
