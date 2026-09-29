@@ -34,6 +34,10 @@ public class MailConfig {
         mailSender.setHost(resolvedHost);
 
         int resolvedPort = (port > 0) ? port : 465;
+        // Cloud providers like Render block outbound port 587; auto-switch to 465 SSL
+        if (resolvedPort == 587) {
+            resolvedPort = 465;
+        }
         mailSender.setPort(resolvedPort);
 
         String cleanUsername = username != null ? username.trim() : "abdulyahya9973@gmail.com";
@@ -44,23 +48,18 @@ public class MailConfig {
         mailSender.setDefaultEncoding("UTF-8");
 
         Properties props = mailSender.getJavaMailProperties();
-        props.put("mail.transport.protocol", "smtp");
+        props.put("mail.transport.protocol", "smtps");
         props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.ssl.enable", "true");
         props.put("mail.smtp.ssl.trust", "*");
+        props.put("mail.smtp.starttls.enable", "false");
+        props.put("mail.smtp.socketFactory.port", "465");
+        props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        props.put("mail.smtp.socketFactory.fallback", "false");
         props.put("mail.smtp.connectiontimeout", "10000");
         props.put("mail.smtp.timeout", "10000");
         props.put("mail.smtp.writetimeout", "10000");
         props.put("mail.smtp.from", cleanUsername);
-
-        if (resolvedPort == 465) {
-            props.put("mail.smtp.ssl.enable", "true");
-            props.put("mail.smtp.socketFactory.port", "465");
-            props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
-            props.put("mail.smtp.socketFactory.fallback", "false");
-        } else {
-            props.put("mail.smtp.starttls.enable", "true");
-            props.put("mail.smtp.starttls.required", "true");
-        }
 
         props.put("mail.debug", "true");
 
