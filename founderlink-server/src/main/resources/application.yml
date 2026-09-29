@@ -1,0 +1,85 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: founderlink-server
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:jdbc:postgresql://ep-square-hat-b87lvinm-pooler.c-14.us-east-1.aws.neon.tech:5432/founderlink_db?sslmode=require}}
+    username: ${DB_USERNAME:${SPRING_DATASOURCE_USERNAME:neondb_owner}}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:npg_xvnhi6kWEa3U}}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+
+  rabbitmq:
+    addresses: ${SPRING_RABBITMQ_ADDRESSES:amqps://wxhdvvyu:l4qvNpKdzBDNJnY4cItJS8wf9S5XVXUR@warthog.lmq.cloudamqp.com/wxhdvvyu}
+    host: ${SPRING_RABBITMQ_HOST:warthog.lmq.cloudamqp.com}
+    port: ${SPRING_RABBITMQ_PORT:5671}
+    username: ${SPRING_RABBITMQ_USERNAME:wxhdvvyu}
+    password: ${SPRING_RABBITMQ_PASSWORD:l4qvNpKdzBDNJnY4cItJS8wf9S5XVXUR}
+    ssl:
+      enabled: true
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:fun-kodiak-318520.upstash.io}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:gQAAAAAABNw4AAIgcDF1ZjBiMGVjYTE2ZTg0M2E1ODczOWViOTE3NWMzOWIxNg}
+      ssl:
+        enabled: ${SPRING_DATA_REDIS_SSL_ENABLED:true}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:abdulyahya9973@gmail.com}
+    password: ${MAIL_PASSWORD:mibhdzruybcieepj}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# Eureka disabled in unified server mode
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+
+jwt:
+  secret: ${JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:86400000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_SXKeveANnvzMlz}
+  key-secret: ${RAZORPAY_KEY_SECRET:MSalZTHDiSjHdNdkrYTSAKL8}
+
+rabbitmq:
+  exchange: founderlink.exchange
+
+app:
+  admin:
+    password: ${ADMIN_PASSWORD:Admin@123}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always

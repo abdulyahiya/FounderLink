@@ -23,6 +23,7 @@
         <module>MessagingService</module>
         <module>NotificationService</module>
         <module>PaymentService</module>
+        <module>founderlink-server</module>
     </modules>
 
     <!-- ── SonarQube Properties (inherited by all modules) ────────── -->
