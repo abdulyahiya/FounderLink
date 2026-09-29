@@ -54,17 +54,27 @@ export SPRING_DATA_REDIS_PORT=${SPRING_DATA_REDIS_PORT:-6379}
 export SPRING_DATA_REDIS_PASSWORD=${SPRING_DATA_REDIS_PASSWORD:-gQAAAAAABNw4AAIgcDF1ZjBiMGVjYTE2ZTg0M2E1ODczOWViOTE3NWMzOWIxNg}
 export SPRING_DATA_REDIS_SSL_ENABLED="true"
 
-# ── 4. Discovery & Networking ──────────────────────────────
+# ── 4. Discovery & Direct Resilient Local Routing ──────────
 export EUREKA_SERVER_HOST="127.0.0.1"
 export CONFIG_SERVER_HOST="127.0.0.1"
 export ZIPKIN_HOST="127.0.0.1"
 export JWT_SECRET="5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437"
 export PORT=${PORT:-8080}
 
+# Direct local URLs bypass discovery delay for instant reliability
+export AUTH_SERVICE_URL="http://127.0.0.1:8081"
+export USER_SERVICE_URL="http://127.0.0.1:8082"
+export STARTUP_SERVICE_URL="http://127.0.0.1:8083"
+export INVESTMENT_SERVICE_URL="http://127.0.0.1:8084"
+export TEAM_SERVICE_URL="http://127.0.0.1:8085"
+export MESSAGING_SERVICE_URL="http://127.0.0.1:8086"
+export NOTIFICATION_SERVICE_URL="http://127.0.0.1:8087"
+export PAYMENT_SERVICE_URL="http://127.0.0.1:8089"
+
 echo "[Init] DB Host: $DB_HOST (User: $DB_USERNAME)"
 echo "[Init] RabbitMQ Host: $RABBITMQ_HOST"
 echo "[Init] Redis Host: $SPRING_DATA_REDIS_HOST"
-echo "[Init] Public Port: $PORT"
+echo "[Init] Ingress Port: $PORT"
 
 # Helper function to construct JDBC URL
 get_jdbc_url() {
@@ -72,16 +82,16 @@ get_jdbc_url() {
     echo "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${db_name}?sslmode=require"
 }
 
-# JVM Tuning for 512MB RAM multi-service container
+# Ultra-efficient JVM flags
 JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms16m -Xmx40m"
-GATEWAY_JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xms32m -Xmx64m"
+GATEWAY_JVM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xss256k -Xms32m -Xmx64m"
 
-# 1. Start Eureka Server in Background
+# 1. Start Eureka Server
 echo "[1/10] Starting Eureka Discovery Server on port 8761..."
 nohup java $JVM_OPTS -jar /app/EurekaServer.jar > /tmp/eureka.log 2>&1 &
 
-# 2. Start Core Services in Background
-echo "[2/10] Starting AuthService (registration & login)..."
+# 2. Start Core Services
+echo "[2/10] Starting AuthService..."
 nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'founderlink_auth')" \
 java $JVM_OPTS -jar /app/AuthService.jar > /tmp/auth.log 2>&1 &
 
@@ -112,6 +122,9 @@ java $JVM_OPTS -jar /app/NotificationService.jar > /tmp/notification.log 2>&1 &
 echo "[9/10] Starting PaymentService..."
 nohup env SPRING_DATASOURCE_URL="$(get_jdbc_url 'paymentdb')" \
 java $JVM_OPTS -jar /app/PaymentService.jar > /tmp/payment.log 2>&1 &
+
+# Brief pause so services begin listening
+sleep 3
 
 echo "[10/10] Launching API Gateway in foreground on Port $PORT..."
 exec java $GATEWAY_JVM_OPTS -jar /app/api-gateway.jar

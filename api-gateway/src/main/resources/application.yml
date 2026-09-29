@@ -20,56 +20,56 @@ spring:
             strategy: RETAIN_UNIQUE
       routes:
         - id: auth-service
-          uri: lb://AUTH-SERVICE
+          uri: ${AUTH_SERVICE_URL:lb://AUTH-SERVICE}
           predicates:
             - Path=/auth/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: user-service
-          uri: lb://USER-SERVICE
+          uri: ${USER_SERVICE_URL:lb://USER-SERVICE}
           predicates:
             - Path=/users/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: startup-service
-          uri: lb://STARTUP-SERVICE
+          uri: ${STARTUP_SERVICE_URL:lb://STARTUP-SERVICE}
           predicates:
             - Path=/startups/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: investment-service
-          uri: lb://INVESTMENT-SERVICE
+          uri: ${INVESTMENT_SERVICE_URL:lb://INVESTMENT-SERVICE}
           predicates:
             - Path=/investments/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: team-service
-          uri: lb://TEAM-SERVICE
+          uri: ${TEAM_SERVICE_URL:lb://TEAM-SERVICE}
           predicates:
             - Path=/teams/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: messaging-service
-          uri: lb://MESSAGING-SERVICE
+          uri: ${MESSAGING_SERVICE_URL:lb://MESSAGING-SERVICE}
           predicates:
             - Path=/messages/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: notification-service
-          uri: lb://NOTIFICATION-SERVICE
+          uri: ${NOTIFICATION_SERVICE_URL:lb://NOTIFICATION-SERVICE}
           predicates:
             - Path=/notifications/**
           filters:
             - name: JwtAuthenticationFilter
 
         - id: payment-service
-          uri: lb://PAYMENT-SERVICE
+          uri: ${PAYMENT_SERVICE_URL:lb://PAYMENT-SERVICE}
           predicates:
             - Path=/api/payments/**
           filters:
