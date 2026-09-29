@@ -8,6 +8,7 @@ import com.capgemini.authservice.mapper.AuthMapper;
 import com.capgemini.authservice.repository.UserRepository;
 import com.capgemini.authservice.security.SecurityConfig;
 import com.capgemini.authservice.service.AuthService;
+import com.capgemini.authservice.security.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthMapper authMapper;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -187,5 +191,47 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(requestBody)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /auth/change-password
+    // -------------------------------------------------------------------------
+
+    @Test
+    void changePassword_withBearerToken_shouldReturn200() throws Exception {
+        // given
+        Map<String, String> requestBody = Map.of(
+                "oldPassword", "OldPass@123",
+                "newPassword", "NewPass@123"
+        );
+        when(jwtUtil.validateToken("valid.jwt.token")).thenReturn(true);
+        when(jwtUtil.extractUserId("valid.jwt.token")).thenReturn(1L);
+
+        // when / then
+        mockMvc.perform(post("/auth/change-password")
+                        .with(csrf())
+                        .header("Authorization", "Bearer valid.jwt.token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password changed successfully"));
+    }
+
+    @Test
+    void changePassword_withHeaderUserId_shouldReturn200() throws Exception {
+        // given
+        Map<String, String> requestBody = Map.of(
+                "oldPassword", "OldPass@123",
+                "newPassword", "NewPass@123"
+        );
+
+        // when / then
+        mockMvc.perform(post("/auth/change-password")
+                        .with(csrf())
+                        .header("X-User-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password changed successfully"));
     }
 }

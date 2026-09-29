@@ -16,8 +16,11 @@ public class WelcomeEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
+
+    @Value("${app.client-url:${CLIENT_URL:http://localhost:3001}}")
+    private String clientUrl;
 
     @Async
     public void sendWelcome(String toEmail, String name, String role) {
@@ -28,7 +31,7 @@ public class WelcomeEmailService {
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
             helper.setSubject("Welcome to FounderLink, " + name + "!");
-            helper.setText(buildHtml(name, role), true);
+            helper.setText(buildHtml(name, role, clientUrl), true);
 
             mailSender.send(message);
             log.info("Welcome email sent to {}", toEmail);
@@ -37,7 +40,7 @@ public class WelcomeEmailService {
         }
     }
 
-    private String buildHtml(String name, String role) {
+    private String buildHtml(String name, String role, String linkUrl) {
         String roleLabel       = roleLabel(role);
         String roleDescription = roleDescription(role);
         String accentColor     = roleColor(role);
@@ -117,7 +120,7 @@ public class WelcomeEmailService {
 
                               <!-- CTA button -->
                               <div style="text-align:center;margin-top:36px;">
-                                <a href="http://localhost:3000"
+                                <a href="%s"
                                    style="display:inline-block;
                                           background:linear-gradient(135deg,#4f46e5,#7c3aed);
                                           color:#ffffff;text-decoration:none;
@@ -152,7 +155,8 @@ public class WelcomeEmailService {
                 """.formatted(
                 name,
                 accentColor, accentColor, roleLabel, roleDescription,
-                nextSteps
+                nextSteps,
+                linkUrl
         );
     }
 

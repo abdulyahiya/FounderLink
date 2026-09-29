@@ -64,7 +64,13 @@ public class JwtUtil {
     }
 
     public Long extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Long.class);
+        Object userIdObj = extractAllClaims(token).get("userId");
+        if (userIdObj instanceof Number number) {
+            return number.longValue();
+        } else if (userIdObj instanceof String str) {
+            return Long.parseLong(str);
+        }
+        return null;
     }
 
     public String extractEmail(String token) {

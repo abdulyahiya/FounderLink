@@ -4,9 +4,14 @@ import com.capgemini.authservice.mapper.AuthMapper;
 import com.capgemini.authservice.service.IAuthService;
 import com.capgemini.authservice.dto.*;
 import com.capgemini.authservice.repository.UserRepository;
+import com.capgemini.authservice.exception.CustomException;
+import com.capgemini.authservice.security.JwtUtil;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +27,7 @@ public class AuthController {
     private final IAuthService authService;
     private final UserRepository userRepository;
     private final AuthMapper authMapper;
+    private final JwtUtil jwtUtil;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -74,9 +80,32 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader(value = "X-User-Id", required = false) Long headerUserId,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
             @Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
+        Long resolvedUserId = headerUserId;
+
+        if (resolvedUserId == null && authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtUtil.validateToken(token)) {
+                resolvedUserId = jwtUtil.extractUserId(token);
+            }
+        }
+
+        if (resolvedUserId == null) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+                try {
+                    resolvedUserId = Long.parseLong(auth.getName());
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (resolvedUserId == null) {
+            throw new CustomException("Unauthorized: user ID could not be identified", HttpStatus.UNAUTHORIZED);
+        }
+
+        authService.changePassword(resolvedUserId, request.getOldPassword(), request.getNewPassword());
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
     }
 }

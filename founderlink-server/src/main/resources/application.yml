@@ -39,19 +39,20 @@ spring:
         enabled: ${SPRING_DATA_REDIS_SSL_ENABLED:true}
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:abdulyahya9973@gmail.com}
-    password: ${MAIL_PASSWORD:mibhdzruybcieepj}
+    host: ${SPRING_MAIL_HOST:${MAIL_HOST:smtp.gmail.com}}
+    port: ${SPRING_MAIL_PORT:${MAIL_PORT:587}}
+    username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:abdulyahya9973@gmail.com}}
+    password: ${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD:xooecxywzeuahpng}}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-          connectiontimeout: 3000
-          timeout: 3000
-          writetimeout: 3000
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
 # Eureka disabled in unified server mode
 eureka:

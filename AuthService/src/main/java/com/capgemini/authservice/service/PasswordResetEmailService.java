@@ -16,12 +16,16 @@ public class PasswordResetEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
+
+    @Value("${app.client-url:${CLIENT_URL:http://localhost:3001}}")
+    private String clientUrl;
 
     @Async
     public void sendResetLink(String toEmail, String name, String token) {
-        String resetLink = "http://localhost:3001/reset-password?token=" + token;
+        String baseUrl = clientUrl.endsWith("/") ? clientUrl.substring(0, clientUrl.length() - 1) : clientUrl;
+        String resetLink = baseUrl + "/reset-password?token=" + token;
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
