@@ -48,6 +48,9 @@ class AuthControllerTest {
     @MockitoBean
     private JwtUtil jwtUtil;
 
+    @MockitoBean
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
+
     @Autowired
     private ObjectMapper objectMapper;
 

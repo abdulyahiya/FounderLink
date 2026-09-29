@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
 
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +31,31 @@ public class AuthController {
     private final UserRepository userRepository;
     private final AuthMapper authMapper;
     private final JwtUtil jwtUtil;
+    private final org.springframework.mail.javamail.JavaMailSender mailSender;
+
+    @GetMapping("/test-email")
+    public ResponseEntity<Map<String, Object>> testEmail(@RequestParam(defaultValue = "abdulyahya9973@gmail.com") String to) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom("abdulyahya9973@gmail.com", "FounderLink");
+            helper.setTo(to.trim());
+            helper.setSubject("FounderLink Live Diagnostic Test");
+            helper.setText("<h3>FounderLink Live SMTP Test</h3><p>If you see this email, SMTP is 100% working on live Render server!</p>", true);
+            mailSender.send(message);
+            res.put("success", true);
+            res.put("message", "Email sent successfully to " + to);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("success", false);
+            res.put("error", e.getMessage());
+            if (e.getCause() != null) {
+                res.put("cause", e.getCause().getMessage());
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+        }
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
