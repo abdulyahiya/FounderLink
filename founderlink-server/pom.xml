@@ -196,6 +196,7 @@
                         <exclude>**/team/config/SecurityConfig.java</exclude>
                         <exclude>**/messaging/config/SecurityConfig.java</exclude>
                         <exclude>**/notification/config/SecurityConfig.java</exclude>
+                        <exclude>**/authservice/config/MailConfig.java</exclude>
                         <exclude>**/AuthServiceApplication.java</exclude>
                         <exclude>**/UserServiceApplication.java</exclude>
                         <exclude>**/StartupServiceApplication.java</exclude>

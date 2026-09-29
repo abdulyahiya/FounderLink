@@ -1,5 +1,6 @@
 package com.capgemini.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import java.util.Properties;
 
 @Configuration
+@Slf4j
 public class MailConfig {
 
     @Value("${spring.mail.host:${MAIL_HOST:smtp.gmail.com}}")
@@ -28,7 +30,8 @@ public class MailConfig {
     @Primary
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost(host != null && !host.isBlank() ? host.trim() : "smtp.gmail.com");
+        String resolvedHost = (host != null && !host.isBlank()) ? host.trim() : "smtp.gmail.com";
+        mailSender.setHost(resolvedHost);
 
         int resolvedPort = (port > 0) ? port : 465;
         mailSender.setPort(resolvedPort);
@@ -47,6 +50,7 @@ public class MailConfig {
         props.put("mail.smtp.connectiontimeout", "10000");
         props.put("mail.smtp.timeout", "10000");
         props.put("mail.smtp.writetimeout", "10000");
+        props.put("mail.smtp.from", cleanUsername);
 
         if (resolvedPort == 465) {
             props.put("mail.smtp.ssl.enable", "true");
@@ -59,6 +63,9 @@ public class MailConfig {
         }
 
         props.put("mail.debug", "true");
+
+        log.info("[MailConfig] Initialized JavaMailSender: host={}, port={}, username={}",
+                resolvedHost, resolvedPort, cleanUsername);
 
         return mailSender;
     }
