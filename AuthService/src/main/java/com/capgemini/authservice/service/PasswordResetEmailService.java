@@ -27,18 +27,20 @@ public class PasswordResetEmailService {
         String baseUrl = clientUrl.endsWith("/") ? clientUrl.substring(0, clientUrl.length() - 1) : clientUrl;
         String resetLink = baseUrl + "/reset-password?token=" + token;
         try {
+            log.info("Sending password reset email to: {}", toEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
+            String sender = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail.trim() : "abdulyahya9973@gmail.com";
+            helper.setFrom(sender, "FounderLink");
+            helper.setTo(toEmail.trim());
             helper.setSubject("Reset Your FounderLink Password");
             helper.setText(buildHtml(name, resetLink), true);
 
             mailSender.send(message);
-            log.info("Password reset email sent to {}", toEmail);
+            log.info("Password reset email sent successfully to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage(), e);
         }
     }
 

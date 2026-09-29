@@ -26,15 +26,16 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
+            String sender = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail.trim() : "abdulyahya9973@gmail.com";
+            helper.setFrom(sender, "FounderLink");
+            helper.setTo(toEmail.trim());
             helper.setSubject("Welcome to FounderLink, " + name + "!");
             helper.setText(buildWelcomeEmailHtml(name, role), true);
 
             mailSender.send(message);
-            log.info("Welcome email sent to {}", toEmail);
+            log.info("Welcome email sent successfully to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage(), e);
         }
     }
 
