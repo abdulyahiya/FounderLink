@@ -143,38 +143,61 @@ const Unauthorized: React.FC = () => (
   </div>
 );
 
-// ─── Lazy Page Imports ────────────────────────────────────────────────────────
+// ─── Lazy Page Imports with Auto-Retry on Deployment ──────────────────────────
 
-const LandingPage        = lazy(() => import('../features/common/LandingPage'));
-const Login              = lazy(() => import('../features/auth/Login'));
-const Register           = lazy(() => import('../features/auth/Register'));
-const ForgotPassword     = lazy(() => import('../features/auth/ForgotPassword'));
-const ResetPassword      = lazy(() => import('../features/auth/ResetPassword'));
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  componentImport: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    const pageHasBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
 
-const FounderDashboard      = lazy(() => import('../features/founder/FounderDashboard'));
-const FounderStartupDetail  = lazy(() => import('../features/founder/FounderStartupDetail'));
-const MyStartups            = lazy(() => import('../features/founder/MyStartups'));
-const CreateStartup      = lazy(() => import('../features/founder/CreateStartup'));
-const EditStartup        = lazy(() => import('../features/founder/EditStartup'));
-const TeamManagement     = lazy(() => import('../features/founder/TeamManagement'));
-const FounderInvestments = lazy(() => import('../features/founder/FounderInvestments'));
-const ReceivedPayments   = lazy(() => import('../features/founder/ReceivedPayments'));
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error: any) {
+      if (!pageHasBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+      throw error;
+    }
+  });
+}
 
-const CoFounderDashboard = lazy(() => import('../features/cofounder/CoFounderDashboard'));
-const MyInvitations      = lazy(() => import('../features/founder/MyInvitations'));
+const LandingPage        = lazyWithRetry(() => import('../features/common/LandingPage'));
+const Login              = lazyWithRetry(() => import('../features/auth/Login'));
+const Register           = lazyWithRetry(() => import('../features/auth/Register'));
+const ForgotPassword     = lazyWithRetry(() => import('../features/auth/ForgotPassword'));
+const ResetPassword      = lazyWithRetry(() => import('../features/auth/ResetPassword'));
 
-const InvestorDashboard  = lazy(() => import('../features/investor/InvestorDashboard'));
-const BrowseStartups     = lazy(() => import('../features/investor/BrowseStartups'));
-const StartupDetail      = lazy(() => import('../features/investor/StartupDetail'));
-const MyInvestments      = lazy(() => import('../features/investor/MyInvestments'));
-const PaymentHistory     = lazy(() => import('../features/investor/PaymentHistory'));
+const FounderDashboard      = lazyWithRetry(() => import('../features/founder/FounderDashboard'));
+const FounderStartupDetail  = lazyWithRetry(() => import('../features/founder/FounderStartupDetail'));
+const MyStartups            = lazyWithRetry(() => import('../features/founder/MyStartups'));
+const CreateStartup      = lazyWithRetry(() => import('../features/founder/CreateStartup'));
+const EditStartup        = lazyWithRetry(() => import('../features/founder/EditStartup'));
+const TeamManagement     = lazyWithRetry(() => import('../features/founder/TeamManagement'));
+const FounderInvestments = lazyWithRetry(() => import('../features/founder/FounderInvestments'));
+const ReceivedPayments   = lazyWithRetry(() => import('../features/founder/ReceivedPayments'));
 
-const AdminDashboard     = lazy(() => import('../features/admin/AdminDashboard'));
+const CoFounderDashboard = lazyWithRetry(() => import('../features/cofounder/CoFounderDashboard'));
+const MyInvitations      = lazyWithRetry(() => import('../features/founder/MyInvitations'));
 
-const Notifications      = lazy(() => import('../features/common/Notifications'));
-const Messages           = lazy(() => import('../features/common/Messages'));
-const Chat               = lazy(() => import('../features/common/Chat'));
-const Profile            = lazy(() => import('../features/common/Profile'));
+const InvestorDashboard  = lazyWithRetry(() => import('../features/investor/InvestorDashboard'));
+const BrowseStartups     = lazyWithRetry(() => import('../features/investor/BrowseStartups'));
+const StartupDetail      = lazyWithRetry(() => import('../features/investor/StartupDetail'));
+const MyInvestments      = lazyWithRetry(() => import('../features/investor/MyInvestments'));
+const PaymentHistory     = lazyWithRetry(() => import('../features/investor/PaymentHistory'));
+
+const AdminDashboard     = lazyWithRetry(() => import('../features/admin/AdminDashboard'));
+
+const Notifications      = lazyWithRetry(() => import('../features/common/Notifications'));
+const Messages           = lazyWithRetry(() => import('../features/common/Messages'));
+const Chat               = lazyWithRetry(() => import('../features/common/Chat'));
+const Profile            = lazyWithRetry(() => import('../features/common/Profile'));
 
 const s = (Component: React.LazyExoticComponent<React.ComponentType<any>>) => (
   <Suspense fallback={<PageLoader />}>
