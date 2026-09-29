@@ -29,16 +29,20 @@ spring:
 
   mail:
     host: ${SPRING_MAIL_HOST:${MAIL_HOST:smtp.gmail.com}}
-    port: ${SPRING_MAIL_PORT:${MAIL_PORT:587}}
+    port: ${SPRING_MAIL_PORT:${MAIL_PORT:465}}
     username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:abdulyahya9973@gmail.com}}
     password: ${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD:xooecxywzeuahpng}}
     properties:
       mail:
+        transport:
+          protocol: smtps
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
-            required: true
+            trust: "*"
+          starttls:
+            enable: false
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
