@@ -62,6 +62,11 @@ resend:
   api-key: ${RESEND_API_KEY:}
   from-email: ${RESEND_FROM:FounderLink <onboarding@resend.dev>}
 
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  from-email: ${BREVO_FROM:abdulyahya9973@gmail.com}
+  from-name: ${BREVO_NAME:FounderLink}
+
 # Eureka disabled in unified server mode
 eureka:
   client:

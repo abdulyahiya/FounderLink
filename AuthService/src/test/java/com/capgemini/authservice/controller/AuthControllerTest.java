@@ -54,6 +54,9 @@ class AuthControllerTest {
     @MockitoBean
     private com.capgemini.authservice.util.ResendEmailClient resendEmailClient;
 
+    @MockitoBean
+    private com.capgemini.authservice.util.BrevoEmailClient brevoEmailClient;
+
     @Autowired
     private ObjectMapper objectMapper;
 

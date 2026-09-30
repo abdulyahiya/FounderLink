@@ -1,6 +1,7 @@
 package com.capgemini.payment.service;
 
 import com.capgemini.payment.entity.Payment;
+import com.capgemini.payment.util.BrevoEmailClient;
 import com.capgemini.payment.util.ResendEmailClient;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final ResendEmailClient resendEmailClient;
+    private final BrevoEmailClient brevoEmailClient;
 
     @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
@@ -31,8 +33,11 @@ public class EmailService {
         String html = buildInvestorSuccessHtml(payment);
 
         try {
-            boolean sent = resendEmailClient.sendEmail(to, subject, html);
-            if (sent) {
+            if (brevoEmailClient.sendEmail(to, subject, html)) {
+                log.info("Payment success email sent to investor via Brevo: {}", to);
+                return;
+            }
+            if (resendEmailClient.sendEmail(to, subject, html)) {
                 log.info("Payment success email sent to investor via Resend: {}", to);
                 return;
             }
@@ -60,8 +65,11 @@ public class EmailService {
         String html = buildInvestorRejectedHtml(payment);
 
         try {
-            boolean sent = resendEmailClient.sendEmail(to, subject, html);
-            if (sent) {
+            if (brevoEmailClient.sendEmail(to, subject, html)) {
+                log.info("Payment rejection email sent to investor via Brevo: {}", to);
+                return;
+            }
+            if (resendEmailClient.sendEmail(to, subject, html)) {
                 log.info("Payment rejection email sent to investor via Resend: {}", to);
                 return;
             }
@@ -89,8 +97,11 @@ public class EmailService {
         String html = buildFounderSuccessHtml(payment);
 
         try {
-            boolean sent = resendEmailClient.sendEmail(to, subject, html);
-            if (sent) {
+            if (brevoEmailClient.sendEmail(to, subject, html)) {
+                log.info("Payment received email sent to founder via Brevo: {}", to);
+                return;
+            }
+            if (resendEmailClient.sendEmail(to, subject, html)) {
                 log.info("Payment received email sent to founder via Resend: {}", to);
                 return;
             }

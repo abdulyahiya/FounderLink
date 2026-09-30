@@ -33,23 +33,31 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final org.springframework.mail.javamail.JavaMailSender mailSender;
     private final com.capgemini.authservice.util.ResendEmailClient resendEmailClient;
+    private final com.capgemini.authservice.util.BrevoEmailClient brevoEmailClient;
 
     @GetMapping("/test-email")
     public ResponseEntity<Map<String, Object>> testEmail(@RequestParam(defaultValue = "abdulyahya9973@gmail.com") String to) {
         Map<String, Object> res = new HashMap<>();
         String subject = "FounderLink Live Diagnostic Test";
-        String html = "<h3>FounderLink Live Email Test</h3><p>If you see this email, Resend HTTPS delivery is active and working 100%!</p>";
+        String html = "<h3>FounderLink Live Email Test</h3><p>If you see this email, HTTPS email delivery is active and working 100%!</p>";
 
-        // Try Resend HTTPS
-        boolean resendOk = resendEmailClient.sendEmail(to, subject, html);
-        if (resendOk) {
+        // 1. Try Brevo HTTPS
+        if (brevoEmailClient.sendEmail(to, subject, html)) {
+            res.put("success", true);
+            res.put("provider", "Brevo HTTPS API");
+            res.put("message", "Email delivered successfully via Brevo HTTPS to " + to);
+            return ResponseEntity.ok(res);
+        }
+
+        // 2. Try Resend HTTPS
+        if (resendEmailClient.sendEmail(to, subject, html)) {
             res.put("success", true);
             res.put("provider", "Resend HTTPS API");
             res.put("message", "Email delivered successfully via Resend HTTPS to " + to);
             return ResponseEntity.ok(res);
         }
 
-        // Try SMTP fallback
+        // 3. Try SMTP fallback
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

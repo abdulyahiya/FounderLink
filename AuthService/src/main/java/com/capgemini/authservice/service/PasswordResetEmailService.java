@@ -1,5 +1,6 @@
 package com.capgemini.authservice.service;
 
+import com.capgemini.authservice.util.BrevoEmailClient;
 import com.capgemini.authservice.util.ResendEmailClient;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class PasswordResetEmailService {
 
     private final JavaMailSender mailSender;
     private final ResendEmailClient resendEmailClient;
+    private final BrevoEmailClient brevoEmailClient;
 
     @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
@@ -33,15 +35,22 @@ public class PasswordResetEmailService {
 
         try {
             log.info("Sending password reset email to: {}", toEmail);
-            
-            // Try Resend HTTPS first (works 100% on Render and cloud hosts)
+
+            // 1. Try Brevo HTTPS API (Sends to ANY email, no domain required)
+            boolean sentViaBrevo = brevoEmailClient.sendEmail(toEmail, subject, htmlContent);
+            if (sentViaBrevo) {
+                log.info("Password reset email sent successfully via Brevo HTTPS to {}", toEmail);
+                return;
+            }
+
+            // 2. Try Resend HTTPS API
             boolean sentViaResend = resendEmailClient.sendEmail(toEmail, subject, htmlContent);
             if (sentViaResend) {
                 log.info("Password reset email sent successfully via Resend HTTPS to {}", toEmail);
                 return;
             }
 
-            // Fallback to SMTP
+            // 3. Fallback to SMTP
             log.info("Attempting SMTP fallback for {}", toEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

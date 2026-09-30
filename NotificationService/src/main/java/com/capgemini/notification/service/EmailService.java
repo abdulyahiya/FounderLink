@@ -1,5 +1,6 @@
 package com.capgemini.notification.service;
 
+import com.capgemini.notification.util.BrevoEmailClient;
 import com.capgemini.notification.util.ResendEmailClient;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -18,6 +19,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final ResendEmailClient resendEmailClient;
+    private final BrevoEmailClient brevoEmailClient;
 
     @Value("${spring.mail.username:abdulyahya9973@gmail.com}")
     private String fromEmail;
@@ -30,14 +32,21 @@ public class EmailService {
         try {
             log.info("Sending welcome email to: {}", toEmail);
 
-            // Try Resend HTTPS first
+            // 1. Try Brevo HTTPS API
+            boolean sentViaBrevo = brevoEmailClient.sendEmail(toEmail, subject, htmlContent);
+            if (sentViaBrevo) {
+                log.info("Welcome email sent successfully via Brevo HTTPS to {}", toEmail);
+                return;
+            }
+
+            // 2. Try Resend HTTPS API
             boolean sentViaResend = resendEmailClient.sendEmail(toEmail, subject, htmlContent);
             if (sentViaResend) {
                 log.info("Welcome email sent successfully via Resend HTTPS to {}", toEmail);
                 return;
             }
 
-            // Fallback to SMTP
+            // 3. Fallback to SMTP
             log.info("Attempting SMTP fallback for welcome email to {}", toEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
