@@ -58,7 +58,11 @@ export SPRING_DATA_REDIS_SSL_ENABLED="true"
 export EUREKA_SERVER_HOST="127.0.0.1"
 export CONFIG_SERVER_HOST="127.0.0.1"
 export ZIPKIN_HOST="127.0.0.1"
-export JWT_SECRET="5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437"
+if [ -z "${JWT_SECRET// }" ]; then
+    echo "ERROR: JWT_SECRET environment variable is required and must not be empty. Exiting." >&2
+    exit 1
+fi
+export JWT_SECRET
 export PORT=${PORT:-8080}
 
 # Direct local URLs bypass discovery delay for instant reliability
