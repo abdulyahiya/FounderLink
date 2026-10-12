@@ -14,7 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.security.access.AccessDeniedException;
+import com.capgemini.messaging.exception.ResourceNotFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,21 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public List<MessageResponse> getConversationMessages(Long conversationId) {
+        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId)
+                .stream()
+                .map(messageMapper::toMessageResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MessageResponse> getConversationMessages(Long conversationId, Long userId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (userId == null || (!userId.equals(conversation.getParticipant1Id()) && !userId.equals(conversation.getParticipant2Id()))) {
+            throw new AccessDeniedException("Access denied: You are not a participant in this conversation");
+        }
+
         return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId)
                 .stream()
                 .map(messageMapper::toMessageResponse)

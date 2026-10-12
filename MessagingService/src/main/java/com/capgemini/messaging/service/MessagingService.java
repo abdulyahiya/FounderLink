@@ -8,6 +8,7 @@ import java.util.List;
 public interface MessagingService {
     MessageResponse sendMessage(Long senderId, MessageRequest request);
     List<MessageResponse> getConversationMessages(Long conversationId);
+    List<MessageResponse> getConversationMessages(Long conversationId, Long userId);
     List<ConversationResponse> getMyConversations(Long userId);
     ConversationResponse getOrCreateConversation(Long userId, Long otherUserId);
 }

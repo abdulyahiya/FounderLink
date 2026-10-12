@@ -19,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.security.access.AccessDeniedException;
+import com.capgemini.messaging.exception.ResourceNotFoundException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -102,19 +104,68 @@ class MessageControllerTest {
     // ── GET /messages/conversation/{conversationId} ────────────────────────────
 
     @Test
-    void getConversationMessages_shouldReturn200() throws Exception {
+    void getConversationMessages_asParticipant_shouldReturn200() throws Exception {
         // given
-        given(messagingService.getConversationMessages(100L))
+        given(messagingService.getConversationMessages(eq(100L), eq(1L)))
                 .willReturn(List.of(messageResponse));
 
         // when / then
         mockMvc.perform(get("/messages/conversation/100")
-                        .with(user("test")))
+                        .with(user("1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.message").value("Messages fetched successfully"))
                 .andExpect(jsonPath("$.data[0].conversationId").value(100))
                 .andExpect(jsonPath("$.data[0].content").value("Hello!"));
+    }
+
+    @Test
+    void getConversationMessages_asNonParticipant_shouldReturn403() throws Exception {
+        // given
+        given(messagingService.getConversationMessages(eq(100L), eq(99L)))
+                .willThrow(new AccessDeniedException("Access denied: You are not a participant in this conversation"));
+
+        // when / then
+        mockMvc.perform(get("/messages/conversation/100")
+                        .with(user("99")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Access denied: You are not a participant in this conversation"));
+    }
+
+    @Test
+    void getConversationMessages_unauthenticated_shouldReturn401() throws Exception {
+        // when / then - no user credentials provided, Spring Security rejects with 401
+        mockMvc.perform(get("/messages/conversation/100"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getConversationMessages_changingConversationId_nonParticipant_shouldReturn403() throws Exception {
+        // given - user 1 attempts to access conversation 200 where they are not a participant
+        given(messagingService.getConversationMessages(eq(200L), eq(1L)))
+                .willThrow(new AccessDeniedException("Access denied: You are not a participant in this conversation"));
+
+        // when / then
+        mockMvc.perform(get("/messages/conversation/200")
+                        .with(user("1")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Access denied: You are not a participant in this conversation"));
+    }
+
+    @Test
+    void getConversationMessages_whenNotFound_shouldReturn404() throws Exception {
+        // given
+        given(messagingService.getConversationMessages(eq(999L), eq(1L)))
+                .willThrow(new ResourceNotFoundException("Conversation not found"));
+
+        // when / then
+        mockMvc.perform(get("/messages/conversation/999")
+                        .with(user("1")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Conversation not found"));
     }
 
     // ── GET /messages/conversations ────────────────────────────────────────────

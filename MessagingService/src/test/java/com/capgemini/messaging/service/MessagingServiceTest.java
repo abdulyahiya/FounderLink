@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.springframework.security.access.AccessDeniedException;
+import com.capgemini.messaging.exception.ResourceNotFoundException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
@@ -162,6 +165,59 @@ class MessagingServiceTest {
         assertThat(responses.get(0).getContent()).isEqualTo("Hi");
         assertThat(responses.get(1).getContent()).isEqualTo("Hey");
         verify(messageRepository).findByConversationIdOrderByCreatedAtAsc(CONV_ID);
+    }
+
+    @Test
+    void getConversationMessages_whenParticipant1_shouldReturnMessages() {
+        // given
+        Message msg1 = Message.builder().id(1L).conversationId(CONV_ID).senderId(SENDER_ID)
+                .content("Hi").createdAt(LocalDateTime.now()).build();
+        given(conversationRepository.findById(CONV_ID)).willReturn(Optional.of(existingConversation));
+        given(messageRepository.findByConversationIdOrderByCreatedAtAsc(CONV_ID)).willReturn(List.of(msg1));
+
+        // when
+        List<MessageResponse> responses = messagingService.getConversationMessages(CONV_ID, SENDER_ID);
+
+        // then
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).getContent()).isEqualTo("Hi");
+    }
+
+    @Test
+    void getConversationMessages_whenParticipant2_shouldReturnMessages() {
+        // given
+        Message msg1 = Message.builder().id(1L).conversationId(CONV_ID).senderId(SENDER_ID)
+                .content("Hi").createdAt(LocalDateTime.now()).build();
+        given(conversationRepository.findById(CONV_ID)).willReturn(Optional.of(existingConversation));
+        given(messageRepository.findByConversationIdOrderByCreatedAtAsc(CONV_ID)).willReturn(List.of(msg1));
+
+        // when
+        List<MessageResponse> responses = messagingService.getConversationMessages(CONV_ID, RECEIVER_ID);
+
+        // then
+        assertThat(responses).hasSize(1);
+    }
+
+    @Test
+    void getConversationMessages_whenNonParticipant_shouldThrowAccessDeniedException() {
+        // given
+        given(conversationRepository.findById(CONV_ID)).willReturn(Optional.of(existingConversation));
+
+        // when / then
+        assertThatThrownBy(() -> messagingService.getConversationMessages(CONV_ID, 999L))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("You are not a participant in this conversation");
+    }
+
+    @Test
+    void getConversationMessages_whenConversationNotFound_shouldThrowResourceNotFoundException() {
+        // given
+        given(conversationRepository.findById(999L)).willReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> messagingService.getConversationMessages(999L, SENDER_ID))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Conversation not found");
     }
 
     // ── getMyConversations ─────────────────────────────────────────────────────
