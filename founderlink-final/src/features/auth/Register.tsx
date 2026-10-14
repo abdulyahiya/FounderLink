@@ -64,7 +64,16 @@ const Register: React.FC = () => {
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({ resolver: yupResolver(registerSchema) });
+  } = useForm<RegisterFormData>({
+    resolver: yupResolver(registerSchema),
+    shouldUnregister: false,
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: undefined,
+    },
+  });
   const navigate = useNavigate();
   const selectedRole = watch('role');
   const [showPassword, setShowPassword] = useState(false);
@@ -74,15 +83,36 @@ const Register: React.FC = () => {
 
   const onSubmit = async (data: RegisterFormData): Promise<void> => {
     try {
-      await registerApi(data);
+      const payload: RegisterFormData = {
+        ...data,
+        role: data.role || selectedRole,
+      };
+      if (!payload.role) {
+        toast.error('Please select a role first');
+        setStep('role');
+        return;
+      }
+      await registerApi(payload);
       toast.success('Account created! Please sign in.');
       navigate('/login');
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Registration failed';
+      const msg = err.response?.data?.message || (err.message === 'Network Error' ? 'Server is waking up or unreachable. Please try again in a few moments.' : (err.message || 'Registration failed'));
       toast.error(msg);
-      if (msg.toLowerCase().includes('already registered')) {
+      if (typeof msg === 'string' && msg.toLowerCase().includes('already registered')) {
         setTimeout(() => navigate('/login'), 1500);
       }
+    }
+  };
+
+  const onInvalid = (formErrors: any) => {
+    if (formErrors.role) {
+      toast.error('Please select a role first');
+      setStep('role');
+      return;
+    }
+    const firstKey = Object.keys(formErrors)[0];
+    if (firstKey && formErrors[firstKey]?.message) {
+      toast.error(formErrors[firstKey].message);
     }
   };
 
@@ -168,7 +198,7 @@ const Register: React.FC = () => {
                   <button
                     key={role.value}
                     type="button"
-                    onClick={() => setValue('role', role.value)}
+                    onClick={() => setValue('role', role.value, { shouldValidate: true, shouldDirty: true })}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 18,
                       padding: '18px 22px', borderRadius: 16, textAlign: 'left',
@@ -221,7 +251,7 @@ const Register: React.FC = () => {
               })}
             </div>
 
-            <input type="hidden" {...register('role')} />
+            <input type="hidden" value={selectedRole || ''} {...register('role')} />
             {errors.role && (
               <p style={{ fontFamily: DM, fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{errors.role.message}</p>
             )}
@@ -298,8 +328,11 @@ const Register: React.FC = () => {
               borderRadius: 18, padding: '28px 28px 24px',
               boxShadow: 'var(--shadow-card)',
             }}>
-              <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <input type="hidden" {...register('role')} />
+              <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
+                <input type="hidden" value={selectedRole || ''} {...register('role')} />
+                {errors.role && (
+                  <p style={{ fontFamily: DM, fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{errors.role.message}</p>
+                )}
 
                 {/* Name */}
                 <div style={{ marginBottom: 16 }}>

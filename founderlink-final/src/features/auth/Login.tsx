@@ -44,7 +44,8 @@ const Login: React.FC = () => {
       else if (role === 'ROLE_ADMIN')     navigate('/admin/dashboard');
       else navigate('/login');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Invalid credentials');
+      const msg = err.response?.data?.message || (err.message === 'Network Error' ? 'Server is waking up or unreachable. Please try again in a few moments.' : (err.message || 'Invalid credentials'));
+      toast.error(msg);
     }
   };
 
