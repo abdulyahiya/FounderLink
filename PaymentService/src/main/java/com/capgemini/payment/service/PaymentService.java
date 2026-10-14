@@ -15,6 +15,9 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.capgemini.payment.saga.PaymentSaga;
+import org.springframework.security.access.AccessDeniedException;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +42,20 @@ public class PaymentService implements IPaymentService {
 
     @Override
     public Map<String, Object> createOrder(CreateOrderRequest request) throws RazorpayException {
+        return createOrder(request, null, true);
+    }
+
+    @Override
+    public Map<String, Object> createOrder(CreateOrderRequest request, Long callerUserId, boolean isAdmin) throws RazorpayException {
+        if (!isAdmin && callerUserId != null) {
+            if (request.getInvestorId() != null && !request.getInvestorId().equals(callerUserId)) {
+                throw new AccessDeniedException("Cannot create order on behalf of another investor");
+            }
+            if (request.getInvestorId() == null) {
+                request.setInvestorId(callerUserId);
+            }
+        }
+
         int amountInPaise = (int) (request.getAmount() * 100);
 
         JSONObject orderRequest = new JSONObject();
@@ -143,9 +160,21 @@ public class PaymentService implements IPaymentService {
 
     @Override
     public Map<String, Object> acceptPayment(Long paymentId) {
-        Map<String, Object> response = new HashMap<>();
+        return acceptPayment(paymentId, null, true);
+    }
+
+    @Override
+    public Map<String, Object> acceptPayment(Long paymentId, Long callerUserId, boolean isAdmin) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+        if (!isAdmin && (callerUserId == null || !payment.getFounderId().equals(callerUserId))) {
+            throw new AccessDeniedException("Only the recipient founder or an admin can accept this payment");
+        }
+
+        if (payment.getStatus() != Payment.PaymentStatus.AWAITING_APPROVAL) {
+            throw new IllegalStateException("Payment cannot be accepted in its current status: " + payment.getStatus());
+        }
 
         payment.setStatus(Payment.PaymentStatus.SUCCESS);
         payment.setUpdatedAt(LocalDateTime.now());
@@ -154,7 +183,8 @@ public class PaymentService implements IPaymentService {
         // Saga Step 4a: complete saga (publishes events + sends emails internally)
         sagaOrchestrator.onPaymentAccepted(payment);
 
-        log.info("Founder accepted payment. paymentId={}", paymentId);
+        log.info("Founder accepted payment. paymentId={}, founderId={}", paymentId, callerUserId);
+        Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Investment accepted successfully");
         return response;
@@ -164,9 +194,21 @@ public class PaymentService implements IPaymentService {
 
     @Override
     public Map<String, Object> rejectPayment(Long paymentId) {
-        Map<String, Object> response = new HashMap<>();
+        return rejectPayment(paymentId, null, true);
+    }
+
+    @Override
+    public Map<String, Object> rejectPayment(Long paymentId, Long callerUserId, boolean isAdmin) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+        if (!isAdmin && (callerUserId == null || !payment.getFounderId().equals(callerUserId))) {
+            throw new AccessDeniedException("Only the recipient founder or an admin can reject this payment");
+        }
+
+        if (payment.getStatus() != Payment.PaymentStatus.AWAITING_APPROVAL) {
+            throw new IllegalStateException("Payment cannot be rejected in its current status: " + payment.getStatus());
+        }
 
         payment.setStatus(Payment.PaymentStatus.REJECTED);
         payment.setUpdatedAt(LocalDateTime.now());
@@ -181,6 +223,7 @@ public class PaymentService implements IPaymentService {
             compensated = false;
         }
 
+        Map<String, Object> response = new HashMap<>();
         if (compensated) {
             response.put("success", true);
             response.put("message", "Investment rejected and refund initiated to investor's account");
@@ -195,16 +238,58 @@ public class PaymentService implements IPaymentService {
 
     @Override
     public List<Payment> getPaymentsByInvestor(Long investorId) {
+        return getPaymentsByInvestor(investorId, null, true);
+    }
+
+    @Override
+    public List<Payment> getPaymentsByInvestor(Long investorId, Long callerUserId, boolean isAdmin) {
+        if (!isAdmin && (callerUserId == null || !investorId.equals(callerUserId))) {
+            throw new AccessDeniedException("Access denied to investor payment history");
+        }
         return paymentRepository.findByInvestorIdOrderByCreatedAtDesc(investorId);
     }
 
     @Override
     public List<Payment> getPaymentsByFounder(Long founderId) {
+        return getPaymentsByFounder(founderId, null, true);
+    }
+
+    @Override
+    public List<Payment> getPaymentsByFounder(Long founderId, Long callerUserId, boolean isAdmin) {
+        if (!isAdmin && (callerUserId == null || !founderId.equals(callerUserId))) {
+            throw new AccessDeniedException("Access denied to founder payment history");
+        }
         return paymentRepository.findByFounderIdOrderByCreatedAtDesc(founderId);
     }
 
     @Override
     public List<Payment> getPaymentsByStartup(Long startupId) {
-        return paymentRepository.findByStartupIdOrderByCreatedAtDesc(startupId);
+        return getPaymentsByStartup(startupId, null, true);
+    }
+
+    @Override
+    public List<Payment> getPaymentsByStartup(Long startupId, Long callerUserId, boolean isAdmin) {
+        if (isAdmin || callerUserId == null) {
+            return paymentRepository.findByStartupIdOrderByCreatedAtDesc(startupId);
+        }
+        List<Payment> startupPayments = paymentRepository.findByStartupIdOrderByCreatedAtDesc(startupId);
+        boolean isFounder = startupPayments.stream()
+                .anyMatch(p -> callerUserId.equals(p.getFounderId()));
+        if (isFounder) {
+            return startupPayments;
+        }
+        return paymentRepository.findByStartupIdAndInvestorIdOrderByCreatedAtDesc(startupId, callerUserId);
+    }
+
+    @Override
+    public PaymentSaga getSagaStatus(Long paymentId, Long callerUserId, boolean isAdmin) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found for paymentId: " + paymentId));
+
+        if (!isAdmin && (callerUserId == null || (!callerUserId.equals(payment.getFounderId()) && !callerUserId.equals(payment.getInvestorId())))) {
+            throw new AccessDeniedException("Access denied to saga status for payment: " + paymentId);
+        }
+
+        return sagaOrchestrator.getSagaByPaymentId(paymentId);
     }
 }

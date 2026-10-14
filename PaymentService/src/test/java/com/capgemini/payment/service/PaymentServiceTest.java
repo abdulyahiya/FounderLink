@@ -22,6 +22,7 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -176,12 +177,12 @@ class PaymentServiceTest {
     // ─── acceptPayment ────────────────────────────────────────────────────────
 
     @Test
-    void acceptPayment_success_completesSaga() {
-        Payment payment = buildPayment();
+    void acceptPayment_authorizedFounder_completesSaga() {
+        Payment payment = buildAwaitingApprovalPayment();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
 
-        Map<String, Object> result = paymentService.acceptPayment(1L);
+        Map<String, Object> result = paymentService.acceptPayment(1L, 20L, false);
 
         assertThat(result.get("success")).isEqualTo(true);
         verify(paymentRepository).save(argThat(p -> p.getStatus() == Payment.PaymentStatus.SUCCESS));
@@ -189,24 +190,62 @@ class PaymentServiceTest {
     }
 
     @Test
+    void acceptPayment_unrelatedCaller_throwsAccessDenied_noSideEffects() {
+        Payment payment = buildAwaitingApprovalPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(AccessDeniedException.class,
+                () -> paymentService.acceptPayment(1L, 999L, false));
+
+        verify(paymentRepository, never()).save(any());
+        verify(sagaOrchestrator, never()).onPaymentAccepted(any());
+        assertThat(payment.getStatus()).isEqualTo(Payment.PaymentStatus.AWAITING_APPROVAL);
+    }
+
+    @Test
+    void acceptPayment_adminCaller_completesSaga() {
+        Payment payment = buildAwaitingApprovalPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
+
+        Map<String, Object> result = paymentService.acceptPayment(1L, 999L, true);
+
+        assertThat(result.get("success")).isEqualTo(true);
+        verify(paymentRepository).save(argThat(p -> p.getStatus() == Payment.PaymentStatus.SUCCESS));
+        verify(sagaOrchestrator).onPaymentAccepted(any(Payment.class));
+    }
+
+    @Test
+    void acceptPayment_invalidStatus_throwsIllegalState_noSideEffects() {
+        Payment payment = buildPayment(); // PENDING status
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> paymentService.acceptPayment(1L, 20L, false));
+
+        verify(paymentRepository, never()).save(any());
+        verify(sagaOrchestrator, never()).onPaymentAccepted(any());
+    }
+
+    @Test
     void acceptPayment_paymentNotFound_throwsException() {
         when(paymentRepository.findById(99L)).thenReturn(Optional.empty());
 
         org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
-                () -> paymentService.acceptPayment(99L));
+                () -> paymentService.acceptPayment(99L, 20L, false));
         verify(sagaOrchestrator, never()).onPaymentAccepted(any());
     }
 
     // ─── rejectPayment ────────────────────────────────────────────────────────
 
     @Test
-    void rejectPayment_compensationSuccess_returnsSuccessMessage() {
-        Payment payment = buildPayment();
+    void rejectPayment_authorizedFounder_runsCompensation() {
+        Payment payment = buildAwaitingApprovalPayment();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
         when(sagaOrchestrator.compensate(any(Payment.class))).thenReturn(true);
 
-        Map<String, Object> result = paymentService.rejectPayment(1L);
+        Map<String, Object> result = paymentService.rejectPayment(1L, 20L, false);
 
         assertThat(result.get("success")).isEqualTo(true);
         assertThat(result.get("message").toString()).contains("refund initiated");
@@ -215,16 +254,54 @@ class PaymentServiceTest {
     }
 
     @Test
-    void rejectPayment_compensationFails_returnsErrorMessage() {
-        Payment payment = buildPayment();
+    void rejectPayment_unrelatedCaller_throwsAccessDenied_noRefundOrCompensation() {
+        Payment payment = buildAwaitingApprovalPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(AccessDeniedException.class,
+                () -> paymentService.rejectPayment(1L, 999L, false));
+
+        verify(paymentRepository, never()).save(any());
+        verify(sagaOrchestrator, never()).compensate(any());
+        assertThat(payment.getStatus()).isEqualTo(Payment.PaymentStatus.AWAITING_APPROVAL);
+    }
+
+    @Test
+    void rejectPayment_adminCaller_runsCompensation() {
+        Payment payment = buildAwaitingApprovalPayment();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
-        when(sagaOrchestrator.compensate(any(Payment.class))).thenReturn(false);
+        when(sagaOrchestrator.compensate(any(Payment.class))).thenReturn(true);
 
-        Map<String, Object> result = paymentService.rejectPayment(1L);
+        Map<String, Object> result = paymentService.rejectPayment(1L, 999L, true);
 
-        assertThat(result.get("success")).isEqualTo(false);
-        assertThat(result.get("message").toString()).contains("contact support");
+        assertThat(result.get("success")).isEqualTo(true);
+        verify(sagaOrchestrator).compensate(any(Payment.class));
+    }
+
+    @Test
+    void rejectPayment_invalidStatus_throwsIllegalState_noCompensation() {
+        Payment payment = buildPayment(); // PENDING
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> paymentService.rejectPayment(1L, 20L, false));
+
+        verify(paymentRepository, never()).save(any());
+        verify(sagaOrchestrator, never()).compensate(any());
+    }
+
+    @Test
+    void rejectPayment_alreadyRejected_throwsIllegalState_noRepeatRefund() {
+        Payment payment = buildAwaitingApprovalPayment();
+        payment.setStatus(Payment.PaymentStatus.REJECTED);
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> paymentService.rejectPayment(1L, 20L, false));
+
+        verify(paymentRepository, never()).save(any());
+        verify(sagaOrchestrator, never()).compensate(any());
     }
 
     @Test
@@ -232,33 +309,121 @@ class PaymentServiceTest {
         when(paymentRepository.findById(99L)).thenReturn(Optional.empty());
 
         org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
-                () -> paymentService.rejectPayment(99L));
+                () -> paymentService.rejectPayment(99L, 20L, false));
         verify(sagaOrchestrator, never()).compensate(any());
     }
 
-    // ─── query methods ────────────────────────────────────────────────────────
+    // ─── Query methods ────────────────────────────────────────────────────────
 
     @Test
-    void getPaymentsByInvestor_returnsList() {
-        when(paymentRepository.findByInvestorIdOrderByCreatedAtDesc(1L))
+    void getPaymentsByInvestor_authorizedUser_returnsList() {
+        when(paymentRepository.findByInvestorIdOrderByCreatedAtDesc(10L))
                 .thenReturn(List.of(buildPayment(), buildPayment()));
 
-        assertThat(paymentService.getPaymentsByInvestor(1L)).hasSize(2);
+        assertThat(paymentService.getPaymentsByInvestor(10L, 10L, false)).hasSize(2);
     }
 
     @Test
-    void getPaymentsByFounder_returnsList() {
-        when(paymentRepository.findByFounderIdOrderByCreatedAtDesc(2L))
+    void getPaymentsByInvestor_unrelatedUser_throwsAccessDenied() {
+        org.junit.jupiter.api.Assertions.assertThrows(AccessDeniedException.class,
+                () -> paymentService.getPaymentsByInvestor(10L, 999L, false));
+    }
+
+    @Test
+    void getPaymentsByInvestor_admin_returnsList() {
+        when(paymentRepository.findByInvestorIdOrderByCreatedAtDesc(10L))
                 .thenReturn(List.of(buildPayment()));
 
-        assertThat(paymentService.getPaymentsByFounder(2L)).hasSize(1);
+        assertThat(paymentService.getPaymentsByInvestor(10L, 999L, true)).hasSize(1);
     }
 
     @Test
-    void getPaymentsByStartup_emptyList() {
-        when(paymentRepository.findByStartupIdOrderByCreatedAtDesc(3L)).thenReturn(List.of());
+    void getPaymentsByFounder_authorizedUser_returnsList() {
+        when(paymentRepository.findByFounderIdOrderByCreatedAtDesc(20L))
+                .thenReturn(List.of(buildPayment()));
 
-        assertThat(paymentService.getPaymentsByStartup(3L)).isEmpty();
+        assertThat(paymentService.getPaymentsByFounder(20L, 20L, false)).hasSize(1);
+    }
+
+    @Test
+    void getPaymentsByFounder_unrelatedUser_throwsAccessDenied() {
+        org.junit.jupiter.api.Assertions.assertThrows(AccessDeniedException.class,
+                () -> paymentService.getPaymentsByFounder(20L, 999L, false));
+    }
+
+    @Test
+    void getPaymentsByFounder_admin_returnsList() {
+        when(paymentRepository.findByFounderIdOrderByCreatedAtDesc(20L))
+                .thenReturn(List.of(buildPayment()));
+
+        assertThat(paymentService.getPaymentsByFounder(20L, 999L, true)).hasSize(1);
+    }
+
+    @Test
+    void getPaymentsByStartup_founder_returnsAllStartupPayments() {
+        Payment p = buildPayment();
+        p.setFounderId(20L);
+        when(paymentRepository.findByStartupIdOrderByCreatedAtDesc(30L))
+                .thenReturn(List.of(p));
+
+        List<Payment> result = paymentService.getPaymentsByStartup(30L, 20L, false);
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getPaymentsByStartup_investor_returnsOnlyOwnPayments() {
+        Payment p = buildPayment();
+        p.setInvestorId(10L);
+        when(paymentRepository.findByStartupIdOrderByCreatedAtDesc(30L))
+                .thenReturn(List.of(p));
+        when(paymentRepository.findByStartupIdAndInvestorIdOrderByCreatedAtDesc(30L, 10L))
+                .thenReturn(List.of(p));
+
+        List<Payment> result = paymentService.getPaymentsByStartup(30L, 10L, false);
+        assertThat(result).hasSize(1);
+        verify(paymentRepository).findByStartupIdAndInvestorIdOrderByCreatedAtDesc(30L, 10L);
+    }
+
+    // ─── getSagaStatus ────────────────────────────────────────────────────────
+
+    @Test
+    void getSagaStatus_participantInvestor_returnsSaga() {
+        Payment payment = buildPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(sagaOrchestrator.getSagaByPaymentId(1L)).thenReturn(buildSaga());
+
+        PaymentSaga saga = paymentService.getSagaStatus(1L, 10L, false);
+        assertThat(saga).isNotNull();
+    }
+
+    @Test
+    void getSagaStatus_participantFounder_returnsSaga() {
+        Payment payment = buildPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(sagaOrchestrator.getSagaByPaymentId(1L)).thenReturn(buildSaga());
+
+        PaymentSaga saga = paymentService.getSagaStatus(1L, 20L, false);
+        assertThat(saga).isNotNull();
+    }
+
+    @Test
+    void getSagaStatus_admin_returnsSaga() {
+        Payment payment = buildPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(sagaOrchestrator.getSagaByPaymentId(1L)).thenReturn(buildSaga());
+
+        PaymentSaga saga = paymentService.getSagaStatus(1L, 999L, true);
+        assertThat(saga).isNotNull();
+    }
+
+    @Test
+    void getSagaStatus_unrelatedUser_throwsAccessDenied() {
+        Payment payment = buildPayment();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        org.junit.jupiter.api.Assertions.assertThrows(AccessDeniedException.class,
+                () -> paymentService.getSagaStatus(1L, 999L, false));
+        verify(sagaOrchestrator, never()).getSagaByPaymentId(any());
     }
 
     // ─── helpers ──────────────────────────────────────────────────────────────
@@ -283,6 +448,12 @@ class PaymentServiceTest {
         p.setInvestorName("InvestorY");
         p.setAmount(5000.0);
         p.setStatus(Payment.PaymentStatus.PENDING);
+        return p;
+    }
+
+    private Payment buildAwaitingApprovalPayment() {
+        Payment p = buildPayment();
+        p.setStatus(Payment.PaymentStatus.AWAITING_APPROVAL);
         return p;
     }
 
