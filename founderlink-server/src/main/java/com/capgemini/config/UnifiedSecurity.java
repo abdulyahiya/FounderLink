@@ -30,9 +30,12 @@ import java.util.List;
 public class UnifiedSecurity {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final com.capgemini.ratelimit.RateLimiterFilter rateLimiterFilter;
 
-    public UnifiedSecurity(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public UnifiedSecurity(JwtAuthenticationFilter jwtAuthenticationFilter,
+                           com.capgemini.ratelimit.RateLimiterFilter rateLimiterFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimiterFilter = rateLimiterFilter;
     }
 
     @Bean
@@ -61,6 +64,7 @@ public class UnifiedSecurity {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(rateLimiterFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

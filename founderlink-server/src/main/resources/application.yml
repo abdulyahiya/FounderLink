@@ -37,6 +37,8 @@ spring:
       password: ${SPRING_DATA_REDIS_PASSWORD:gQAAAAAABNw4AAIgcDF1ZjBiMGVjYTE2ZTg0M2E1ODczOWViOTE3NWMzOWIxNg}
       ssl:
         enabled: ${SPRING_DATA_REDIS_SSL_ENABLED:true}
+      timeout: 2000ms
+      connect-timeout: 2000ms
 
   mail:
     host: ${SPRING_MAIL_HOST:${MAIL_HOST:smtp.gmail.com}}
@@ -105,6 +107,8 @@ rabbitmq:
     user-registered: user.registered
 
 app:
+  security:
+    trust-cloudflare: ${TRUST_CLOUDFLARE_HEADER:false}
   admin:
     password: ${ADMIN_PASSWORD:Admin@123}
 
