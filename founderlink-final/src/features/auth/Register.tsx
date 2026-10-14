@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigate, Link } from 'react-router-dom';
@@ -95,16 +96,27 @@ const Register: React.FC = () => {
       await registerApi(payload);
       toast.success('Account created! Please sign in.');
       navigate('/login');
-    } catch (err: any) {
-      const msg = err.response?.data?.message || (err.message === 'Network Error' ? 'Server is waking up or unreachable. Please try again in a few moments.' : (err.message || 'Registration failed'));
-      toast.error(msg);
-      if (typeof msg === 'string' && msg.toLowerCase().includes('already registered')) {
-        setTimeout(() => navigate('/login'), 1500);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        if (err.code === 'ECONNABORTED') {
+          toast.error('Server response took too long. Please try again.');
+        } else if (!err.response) {
+          toast.error('Unable to reach the server. Please try again in a few moments.');
+        } else {
+          const msg = err.response.data?.message || 'Registration failed.';
+          toast.error(msg);
+          if (typeof msg === 'string' && msg.toLowerCase().includes('already registered')) {
+            setTimeout(() => navigate('/login'), 1500);
+          }
+        }
+      } else {
+        toast.error('An unexpected error occurred. Please try again.');
       }
     }
   };
 
   const onInvalid = (formErrors: any) => {
+    console.error('Registration validation failed:', formErrors);
     if (formErrors.role) {
       toast.error('Please select a role first');
       setStep('role');

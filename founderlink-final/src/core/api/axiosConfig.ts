@@ -71,8 +71,8 @@ api.interceptors.response.use(
 
       try {
         const authBase =
-          import.meta.env.VITE_AUTH_API_BASE_URL ||
           import.meta.env.VITE_API_BASE_URL ||
+          import.meta.env.VITE_AUTH_API_BASE_URL ||
           'https://founderlink-c6qc.onrender.com';
         const response = await axios.post<AuthResponse>(
           `${authBase}/auth/refresh`,

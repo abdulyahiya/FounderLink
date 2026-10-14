@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useDispatch } from 'react-redux';
@@ -32,6 +33,14 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
+  const onInvalid = (formErrors: any) => {
+    console.error('Login validation failed:', formErrors);
+    const firstKey = Object.keys(formErrors)[0];
+    if (firstKey && formErrors[firstKey]?.message) {
+      toast.error(formErrors[firstKey].message);
+    }
+  };
+
   const onSubmit = async (data: LoginFormData): Promise<void> => {
     try {
       const res = await login(data);
@@ -43,9 +52,18 @@ const Login: React.FC = () => {
       else if (role === 'ROLE_COFOUNDER') navigate('/cofounder/dashboard');
       else if (role === 'ROLE_ADMIN')     navigate('/admin/dashboard');
       else navigate('/login');
-    } catch (err: any) {
-      const msg = err.response?.data?.message || (err.message === 'Network Error' ? 'Server is waking up or unreachable. Please try again in a few moments.' : (err.message || 'Invalid credentials'));
-      toast.error(msg);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        if (err.code === 'ECONNABORTED') {
+          toast.error('Server response took too long. Please try again.');
+        } else if (!err.response) {
+          toast.error('Unable to reach the server. Please try again in a few moments.');
+        } else {
+          toast.error(err.response.data?.message || 'Invalid credentials');
+        }
+      } else {
+        toast.error('An unexpected error occurred. Please try again.');
+      }
     }
   };
 
@@ -131,7 +149,7 @@ const Login: React.FC = () => {
             borderRadius: 18, padding: '28px 28px 24px',
             boxShadow: 'var(--shadow-card)',
           }}>
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
 
               {/* Email */}
               <div style={{ marginBottom: 16 }}>

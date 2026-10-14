@@ -4,9 +4,10 @@ import { LoginFormData, RegisterFormData, AuthResponse, ApiResponse, ForgotPassw
 
 const authApi = axios.create({
   baseURL:
-    import.meta.env.VITE_AUTH_API_BASE_URL ||
     import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_AUTH_API_BASE_URL ||
     'https://founderlink-c6qc.onrender.com',
+  timeout: 90000,
 });
 
 authApi.interceptors.response.use((response) => {
